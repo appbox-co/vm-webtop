@@ -1,7 +1,5 @@
 [Unit]
 Description=Xvfb Virtual Display Server
-After=multi-user.target
-Wants=multi-user.target
 
 [Service]
 Type=simple
@@ -21,4 +19,4 @@ TimeoutStartSec=30
 TimeoutStopSec=10
 
 [Install]
-WantedBy=multi-user.target 
+# No WantedBy - this service is started by dependency chain 

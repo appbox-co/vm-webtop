@@ -15,4 +15,4 @@ StandardOutput=null
 StandardError=null
 
 [Install]
-WantedBy=multi-user.target 
+# No WantedBy - this service is started by dependency chain 
