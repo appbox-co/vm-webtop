@@ -178,7 +178,7 @@ test_webtop_environment() {
     
     # Check if webtop environment variables are set
     local env_vars=(
-        "TITLE=Ubuntu XFCE"
+        'TITLE="Ubuntu XFCE"'
     )
     
     for env_var in "${env_vars[@]}"; do

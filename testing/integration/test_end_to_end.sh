@@ -125,7 +125,7 @@ test_web_interface_content() {
     fi
     
     # Check if title is correct
-    if grep -q "TITLE=Ubuntu XFCE" /etc/environment; then
+    if grep -q 'TITLE="Ubuntu XFCE"' /etc/environment; then
         if ! echo "$response" | grep -q "Ubuntu XFCE"; then
             log_fail "Web interface does not contain expected title"
             return $FAIL
