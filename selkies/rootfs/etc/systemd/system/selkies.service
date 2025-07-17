@@ -1,0 +1,33 @@
+[Unit]
+Description=Selkies GStreamer Remote Desktop
+After=selkies-nginx.service
+Requires=selkies-nginx.service
+
+[Service]
+Type=simple
+User=abc
+Group=abc
+Environment=HOME=/config
+Environment=DISPLAY=:1
+Environment=GST_DEBUG=*:1
+Environment=SELKIES_ENCODER=x264enc
+Environment=SELKIES_FRAMERATE=60
+Environment=SELKIES_ENABLE_RESIZE=true
+Environment=DISPLAY_SIZEW=1024
+Environment=DISPLAY_SIZEH=768
+Environment=DISPLAY_REFRESH=60
+Environment=DISPLAY_DPI=96
+Environment=DISPLAY_CDEPTH=24
+Environment=SELKIES_INTERPOSER=/usr/lib/selkies_joystick_interposer.so
+Environment=LD_PRELOAD=/usr/lib/selkies_joystick_interposer.so:/opt/lib/libudev.so.1.0.0-fake
+Environment=TITLE=Selkies
+Environment=DEV_MODE=
+ExecStartPre=/bin/bash /etc/selkies/init-selkies-config.sh
+ExecStart=/bin/bash -c 'rm -rf "${HOME}/.cache/gstreamer-1.0"; if [ ! -f "/dev/shm/audio.lock" ]; then until [ -f /defaults/pid ]; do sleep .5; done; pactl load-module module-null-sink sink_name="output" sink_properties=device.description="output"; pactl load-module module-null-sink sink_name="input" sink_properties=device.description="input"; touch /dev/shm/audio.lock; fi; exec selkies --addr="localhost" --port="8081" --enable_basic_auth="false" --enable_metrics_http="true" --metrics_http_port="9081" --mode="websockets"'
+WorkingDirectory=/config
+Restart=always
+RestartSec=5
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target 

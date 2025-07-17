@@ -1,0 +1,22 @@
+[Unit]
+Description=Nginx Web Server for Selkies
+After=selkies-docker.service
+Requires=selkies-docker.service
+
+[Service]
+Type=simple
+Environment=CUSTOM_PORT=3000
+Environment=CUSTOM_HTTPS_PORT=3001
+Environment=CUSTOM_USER=abc
+Environment=SUBFOLDER=/
+Environment=HOME=/config
+ExecStartPre=/bin/bash /etc/selkies/init-nginx.sh
+ExecStartPre=/bin/bash -c 'if pgrep -f "[n]ginx:" >/dev/null; then echo "Zombie nginx processes detected, sending SIGTERM"; pkill -ef [n]ginx:; sleep 1; fi'
+ExecStartPre=/bin/bash -c 'if pgrep -f "[n]ginx:" >/dev/null; then echo "Zombie nginx processes still active, sending SIGKILL"; pkill -9 -ef [n]ginx:; sleep 1; fi'
+ExecStart=/usr/sbin/nginx -g 'daemon off;'
+Restart=always
+RestartSec=5
+TimeoutStartSec=30
+
+[Install]
+WantedBy=multi-user.target 

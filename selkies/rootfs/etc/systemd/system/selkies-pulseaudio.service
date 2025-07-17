@@ -1,0 +1,18 @@
+[Unit]
+Description=PulseAudio Sound Server for Selkies
+After=xvfb.service
+Requires=xvfb.service
+
+[Service]
+Type=simple
+User=abc
+Group=abc
+Environment=PULSE_RUNTIME_PATH=/defaults
+ExecStart=/usr/bin/pulseaudio --log-level=0 --log-target=stderr --exit-idle-time=-1
+Restart=always
+RestartSec=5
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target 

@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# default file copies first run
+if [[ ! -f /config/.config/openbox/autostart ]]; then
+  mkdir -p /config/.config/openbox
+  cp /defaults/autostart /config/.config/openbox/autostart
+  chown -R abc:abc /config/.config/openbox
+fi
+if [[ ! -f /config/.config/openbox/menu.xml ]]; then
+  mkdir -p /config/.config/openbox && \
+  cp /defaults/menu.xml /config/.config/openbox/menu.xml && \
+  chown -R abc:abc /config/.config
+fi
+
+# XDG Home
+if [ ! -d "${HOME}/.XDG" ]; then
+  mkdir -p ${HOME}/.XDG
+  chown abc:abc ${HOME}/.XDG
+fi
+
+# Remove window borders
+if [[ ! -z ${NO_DECOR+x} ]] && [[ ! -f /decorlock ]]; then
+  sed -i \
+    's|</applications>|  <application class="*"> <decor>no</decor> </application>\n</applications>|' \
+    /etc/xdg/openbox/rc.xml
+  touch /decorlock
+fi
+
+# Fullscreen everything in openbox unless the user explicitly disables it
+if [[ ! -z ${NO_FULL+x} ]] && [[ ! -f /fulllock ]]; then
+  sed -i \
+    's|<maximized>yes</maximized>||g' \
+    /etc/xdg/openbox/rc.xml
+  touch /fulllock
+fi
+
+# Add proot-apps
+if [ ! -f "${HOME}/.local/bin/proot-apps" ]; then
+  mkdir -p ${HOME}/.local/bin/
+  cp /proot-apps/* ${HOME}/.local/bin/
+  echo 'export PATH="$HOME/.local/bin:$PATH"' >> $HOME/.bashrc
+  chown abc:abc \
+    ${HOME}/.bashrc \
+    ${HOME}/.local/ \
+    ${HOME}/.local/bin \
+    ${HOME}/.local/bin/{ncat,proot-apps,proot,jq,pversion}
+elif ! diff -q /proot-apps/pversion ${HOME}/.local/bin/pversion > /dev/null; then
+  cp /proot-apps/* ${HOME}/.local/bin/
+  chown abc:abc ${HOME}/.local/bin/{ncat,proot-apps,proot,jq,pversion}
+fi
+
+# JS folder setup
+mkdir -pm1777 /dev/input
+touch /tmp/selkies_js.log
+mknod /dev/input/js0 c 13 0 || true
+mknod /dev/input/js1 c 13 1 || true
+mknod /dev/input/js2 c 13 2 || true
+mknod /dev/input/js3 c 13 3 || true
+mknod /dev/input/event1000 c 13 1064 || true
+mknod /dev/input/event1001 c 13 1065 || true
+mknod /dev/input/event1002 c 13 1066 || true
+mknod /dev/input/event1003 c 13 1067 || true
+chmod 777 /dev/input/js* /dev/input/event* /tmp/selkies* || true
+
+# Manifest creation
+echo "{
+  \"name\": \"${TITLE}\",
+  \"short_name\": \"${TITLE}\",
+  \"manifest_version\": 2,
+  \"version\": \"1.0.0\",
+  \"display\": \"fullscreen\",
+  \"background_color\": \"#000000\",
+  \"theme_color\": \"#000000\",
+  \"icons\": [
+    {
+      \"src\": \"icon.png\",
+      \"type\": \"image/png\",
+      \"sizes\": \"180x180\"
+    }
+  ],
+  \"start_url\": \"/\"
+}" > /usr/share/selkies/www/manifest.json
+
+# Create PID file for audio setup
+echo $$ > /defaults/pid 

@@ -1,0 +1,24 @@
+[Unit]
+Description=Desktop Environment for Selkies
+After=selkies.service
+Requires=selkies.service
+
+[Service]
+Type=simple
+User=abc
+Group=abc
+Environment=HOME=/config
+Environment=DISPLAY=:1
+Environment=LC_ALL=
+Environment=NO_DECOR=
+Environment=NO_FULL=
+Environment=NO_GAMEPAD=
+ExecStartPre=/bin/bash /etc/selkies/init-video.sh
+ExecStart=/bin/bash /etc/selkies/svc-de.sh
+WorkingDirectory=/config
+Restart=always
+RestartSec=5
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target 

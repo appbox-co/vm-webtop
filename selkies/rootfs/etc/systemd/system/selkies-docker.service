@@ -1,0 +1,16 @@
+[Unit]
+Description=Docker daemon for Selkies
+After=selkies-pulseaudio.service
+Requires=selkies-pulseaudio.service
+
+[Service]
+Type=simple
+Environment=START_DOCKER=true
+ExecStartPre=/bin/sleep 5
+ExecStart=/bin/bash -c 'if [ -e /dev/cpu_dma_latency ]; then if [ "${START_DOCKER}" == "true" ]; then exec /usr/local/bin/dockerd-entrypoint.sh -l error; else sleep infinity; fi; fi; sleep infinity'
+Restart=always
+RestartSec=10
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target 
