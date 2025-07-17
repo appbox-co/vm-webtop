@@ -181,9 +181,22 @@ extract_from_docker_image() {
             }
             sleep 2
         fi
-        local container_id=$(docker create "$image_name")
-        docker cp "$container_id:$source_path" "$dest_path"
-        docker rm "$container_id"
+        # Create container with dummy command since we only need to extract files
+        local container_id=$(docker create "$image_name" /bin/true)
+        if [[ -z "$container_id" ]]; then
+            error "Failed to create container from image: $image_name"
+            return 1
+        fi
+        
+        # Extract the file/directory
+        if ! docker cp "$container_id:$source_path" "$dest_path"; then
+            error "Failed to extract $source_path from container"
+            docker rm "$container_id" 2>/dev/null || true
+            return 1
+        fi
+        
+        # Clean up container
+        docker rm "$container_id" || warn "Failed to remove container $container_id"
     fi
 }
 
