@@ -634,24 +634,39 @@ install_all_components() {
     local current=0
     local failed_components=()
     
+    debug "Components to install: ${components[*]}"
+    debug "Total components: $total_components"
+    
     for component in "${components[@]}"; do
         ((current++))
         show_progress "$current" "$total_components" "Installing $component"
         
         info "Installing component: $component"
-        if install_component "$component"; then
+        debug "Component directory: $SCRIPT_DIR/$component"
+        
+        # Temporarily disable exit-on-error to handle component failures gracefully
+        set +e
+        install_component "$component"
+        local component_exit_code=$?
+        set -e
+        
+        debug "Component $component installation exit code: $component_exit_code"
+        
+        if [[ $component_exit_code -eq 0 ]]; then
             info "✓ Component $component installed successfully"
         else
-            error "✗ Component $component failed to install"
+            error "✗ Component $component failed to install (exit code: $component_exit_code)"
             failed_components+=("$component")
         fi
     done
     
     if [[ ${#failed_components[@]} -eq 0 ]]; then
         info "✓ All components installed successfully"
+        return 0
     else
         warn "Some components failed to install: ${failed_components[*]}"
         warn "You can retry individual components with: ./install.sh --component <name>"
+        return 1
     fi
 }
 
@@ -751,9 +766,34 @@ main() {
     
     # Install components
     if [[ -n "$COMPONENT_ONLY" ]]; then
+        info "Installing single component: $COMPONENT_ONLY"
+        debug "Component directory: $SCRIPT_DIR/$COMPONENT_ONLY"
+        
+        # Temporarily disable exit-on-error to handle component failures gracefully
+        set +e
         install_component "$COMPONENT_ONLY"
+        local component_exit_code=$?
+        set -e
+        
+        debug "Component installation exit code: $component_exit_code"
+        
+        if [[ $component_exit_code -eq 0 ]]; then
+            info "✓ Component $COMPONENT_ONLY installed successfully"
+        else
+            error "✗ Component $COMPONENT_ONLY failed to install (exit code: $component_exit_code)"
+            exit 1
+        fi
     else
+        # Temporarily disable exit-on-error to handle component failures gracefully
+        set +e
         install_all_components
+        local all_components_exit_code=$?
+        set -e
+        
+        if [[ $all_components_exit_code -ne 0 ]]; then
+            error "Some components failed to install. Check the log for details."
+            exit 1
+        fi
     fi
     
     # Cleanup
