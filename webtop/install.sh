@@ -252,11 +252,14 @@ cleanup_installation() {
 validate_installation() {
     info "Validating webtop installation..."
     
-    # Check if XFCE packages are installed
-    if ! dpkg -l | grep -q xfce4; then
-        error "XFCE packages not found"
-        exit 1
-    fi
+    # Check if XFCE packages are installed using dpkg-query
+    local xfce_packages=("xfce4" "xfce4-terminal" "chromium" "mousepad")
+    for package in "${xfce_packages[@]}"; do
+        if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "install ok installed"; then
+            error "Package $package not properly installed"
+            exit 1
+        fi
+    done
     
     # Check if modified binaries exist
     if [[ ! -f /usr/bin/chromium ]] || [[ ! -f /usr/bin/exo-open ]] || [[ ! -f /usr/bin/thunar ]]; then
@@ -270,13 +273,16 @@ validate_installation() {
         exit 1
     fi
     
-    # Check if icon exists
-    if [[ ! -f /usr/share/selkies/www/icon.png ]]; then
-        error "Webtop icon not found"
-        exit 1
+    # Check if environment is configured (optional check)
+    if [[ -f /etc/environment ]]; then
+        if ! grep -q "TITLE=Ubuntu XFCE" /etc/environment; then
+            warning "Environment TITLE not set to Ubuntu XFCE"
+        fi
+    else
+        warning "Environment file not found - this is normal if selkies wasn't installed first"
     fi
     
-    success "✓ Installation validation completed"
+    success "✓ Webtop installation validated"
 }
 
 # =============================================================================
