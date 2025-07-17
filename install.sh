@@ -25,7 +25,6 @@ LOG_FILE="/var/log/ubuntu-vm-webtop-install.log"
 VERBOSE=false
 DRY_RUN=false
 COMPONENT_ONLY=""
-INSTALL_TIMEOUT="${INSTALL_TIMEOUT:-1800}"  # 30 minutes default, can be overridden
 
 # Ensure log directory exists and is writable
 if [[ $EUID -eq 0 ]]; then
@@ -449,11 +448,7 @@ update_package_cache() {
     debug "Updating package cache..."
     
     if [[ "$DRY_RUN" == false ]]; then
-        # Add timeout to prevent hanging on network issues
-        timeout 300 apt-get update -qq || {
-            warn "apt-get update timed out or failed, continuing anyway..."
-            return 0
-        }
+        apt-get update -qq
     fi
 }
 
@@ -463,13 +458,7 @@ install_packages() {
     debug "Installing packages: ${packages[*]}"
     
     if [[ "$DRY_RUN" == false ]]; then
-        # Add timeout to prevent hanging on package installation
-        if ! timeout 900 apt-get install -y "${packages[@]}"; then
-            error "Package installation timed out or failed: ${packages[*]}"
-            warn "This may indicate a network issue or package conflict"
-            warn "Try running: apt-get install -y ${packages[*]}"
-            return 1
-        fi
+        apt-get install -y "${packages[@]}"
     fi
 }
 
@@ -581,24 +570,14 @@ install_component() {
         local original_dir="$PWD"
         cd "$component_dir"
         
-        debug "Running component installer for $component_name (timeout: ${INSTALL_TIMEOUT}s)"
-        if timeout "$INSTALL_TIMEOUT" ./install.sh; then
+        debug "Running component installer for $component_name"
+        if ./install.sh; then
             debug "Component installer completed successfully"
             cd "$original_dir"
             return 0
         else
             local exit_code=$?
-            if [[ $exit_code -eq 124 ]]; then
-                error "Component installer timed out after $((INSTALL_TIMEOUT/60)) minutes"
-                warn "This may indicate a hung apt install or other long-running operation"
-                warn "Try these solutions:"
-                warn "  1. Increase timeout: INSTALL_TIMEOUT=3600 ./install.sh --component $component_name"
-                warn "  2. Run component installer manually: cd $component_dir && ./install.sh"
-                warn "  3. Check for apt lock files: ls -la /var/lib/dpkg/lock*"
-                warn "  4. Kill hanging apt processes: pkill -f apt"
-            else
-                error "Component installer failed with exit code: $exit_code"
-            fi
+            error "Component installer failed with exit code: $exit_code"
             cd "$original_dir"
             return 1
         fi
@@ -730,14 +709,10 @@ Options:
     --verbose            Enable verbose output
     --help               Show this help message
 
-Environment Variables:
-    INSTALL_TIMEOUT      Timeout in seconds for component installation (default: 1800)
-
 Examples:
     $0                           # Install all components
     $0 --component selkies       # Install only selkies component
     $0 --dry-run --verbose       # Show installation plan with details
-    INSTALL_TIMEOUT=3600 $0      # Install with 1 hour timeout
 
 Components:
     selkies    - Selkies GStreamer framework with Xvfb

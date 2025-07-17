@@ -76,7 +76,7 @@ setup_repositories() {
         /etc/apt/sources.list.d/xtradeb.list
     
     # Update package lists
-    timeout 300 apt-get update
+    apt-get update
     
     success "✓ Repository setup completed"
 }
@@ -89,7 +89,7 @@ install_xfce_packages() {
     info "Installing XFCE packages..."
     
     # Install XFCE desktop environment and related packages
-    timeout 900 apt-get install --no-install-recommends -y \
+    apt-get install --no-install-recommends -y \
         chromium \
         mousepad \
         xfce4-terminal \
@@ -232,7 +232,7 @@ cleanup_installation() {
     info "Cleaning up installation..."
     
     # Clean package cache
-    timeout 60 apt-get autoclean
+    apt-get autoclean
     
     # Remove temporary files
     rm -rf \

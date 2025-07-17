@@ -64,11 +64,7 @@ debug() { log "DEBUG" "$@"; }
 update_package_cache() {
     debug "Updating package cache..."
     if [[ "$DRY_RUN" == false ]]; then
-        # Add timeout to prevent hanging on network issues
-        timeout 300 apt-get update -qq || {
-            warn "apt-get update timed out or failed, continuing anyway..."
-            return 0
-        }
+        apt-get update -qq
     fi
 }
 
@@ -76,34 +72,7 @@ install_packages() {
     local -a packages=("$@")
     debug "Installing packages: ${packages[*]}"
     if [[ "$DRY_RUN" == false ]]; then
-        # Add timeout to prevent hanging on package installation
-        if ! timeout 900 apt-get install -y "${packages[@]}"; then
-            error "Package installation timed out or failed: ${packages[*]}"
-            warn "This may indicate a network issue or package conflict"
-            warn "Try running: apt-get install -y ${packages[*]}"
-            return 1
-        fi
-    fi
-}
-
-install_packages_with_timeout() {
-    local timeout_seconds="$1"
-    shift
-    local -a packages=("$@")
-    
-    debug "Installing packages with ${timeout_seconds}s timeout: ${packages[*]}"
-    if [[ "$DRY_RUN" == false ]]; then
-        # Use custom timeout for package installation
-        if ! timeout "$timeout_seconds" apt-get install -y "${packages[@]}"; then
-            error "Package installation timed out or failed after ${timeout_seconds}s: ${packages[*]}"
-            warn "This may indicate a network issue, slow mirror, or package conflict"
-            warn "Try these solutions:"
-            warn "  1. Run manually: apt-get install -y ${packages[*]}"
-            warn "  2. Check network: ping archive.ubuntu.com"
-            warn "  3. Change mirror: sed -i 's/archive.ubuntu.com/mirror.example.com/g' /etc/apt/sources.list"
-            warn "  4. Clear apt cache: apt-get clean && apt-get update"
-            return 1
-        fi
+        apt-get install -y "${packages[@]}"
     fi
 }
 
@@ -269,9 +238,9 @@ install_dev_dependencies() {
     
     update_package_cache
     
-    # Install packages in smaller groups to avoid timeouts
+    # Install packages in smaller groups for better organization
     info "Installing build tools..."
-    install_packages_with_timeout 1200 \
+    install_packages \
         cmake \
         git \
         gcc \
@@ -279,12 +248,12 @@ install_dev_dependencies() {
         make
     
     info "Installing development libraries..."
-    install_packages_with_timeout 1200 \
+    install_packages \
         libopus-dev \
         libpulse-dev
     
     info "Installing Python development tools..."
-    install_packages_with_timeout 1200 \
+    install_packages \
         python3-dev \
         python3-pip
 }
@@ -311,11 +280,11 @@ setup_repositories() {
 # =============================================================================
 
 install_main_packages() {
-    info "Installing main packages in groups to avoid timeouts..."
+    info "Installing main packages in groups for better organization..."
     
     # Group 1: Core system packages
     info "Installing core system packages..."
-    install_packages_with_timeout 1200 \
+    install_packages \
         ca-certificates \
         console-data \
         dbus-x11 \
@@ -335,7 +304,7 @@ install_main_packages() {
     
     # Group 2: Docker packages
     info "Installing Docker packages..."
-    install_packages_with_timeout 1200 \
+    install_packages \
         containerd.io \
         docker-buildx-plugin \
         docker-ce \
@@ -345,7 +314,7 @@ install_main_packages() {
     
     # Group 3: Development tools
     info "Installing development tools..."
-    install_packages_with_timeout 1200 \
+    install_packages \
         cmake \
         g++ \
         gcc \
@@ -357,7 +326,7 @@ install_main_packages() {
     
     # Group 4: Basic X11 libraries
     info "Installing basic X11 libraries..."
-    install_packages_with_timeout 1800 \
+    install_packages \
         libev4 \
         libfontenc1 \
         libfreetype6 \
@@ -388,7 +357,7 @@ install_main_packages() {
     
     # Group 5: Mesa and graphics drivers
     info "Installing Mesa and graphics drivers..."
-    install_packages_with_timeout 1800 \
+    install_packages \
         intel-media-va-driver \
         libgl1-mesa-dri \
         libglu1-mesa \
@@ -399,7 +368,7 @@ install_main_packages() {
     
     # Group 6: Fonts and themes
     info "Installing fonts and themes..."
-    install_packages_with_timeout 1200 \
+    install_packages \
         breeze-cursor-theme \
         fonts-noto-cjk \
         fonts-noto-color-emoji \
@@ -408,7 +377,7 @@ install_main_packages() {
     
     # Group 7: Desktop environment and utilities
     info "Installing desktop environment and utilities..."
-    install_packages_with_timeout 1200 \
+    install_packages \
         dunst \
         libnginx-mod-http-fancyindex \
         nginx \
@@ -422,7 +391,7 @@ install_main_packages() {
     
     # Group 8: X11 utilities and tools
     info "Installing X11 utilities and tools..."
-    install_packages_with_timeout 1200 \
+    install_packages \
         x11-apps \
         x11-common \
         x11-utils \
@@ -438,7 +407,7 @@ install_main_packages() {
     
     # Group 9: X server and drivers
     info "Installing X server and graphics drivers..."
-    install_packages_with_timeout 1800 \
+    install_packages \
         xserver-common \
         xserver-xorg-core \
         xserver-xorg-video-amdgpu \
