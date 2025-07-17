@@ -57,7 +57,11 @@ debug() { log "DEBUG" "$@"; }
 update_package_cache() {
     debug "Updating package cache..."
     if [[ "$DRY_RUN" == false ]]; then
-        apt-get update -qq
+        # Add timeout to prevent hanging on network issues
+        timeout 300 apt-get update -qq || {
+            warn "apt-get update timed out or failed, continuing anyway..."
+            return 0
+        }
     fi
 }
 
@@ -65,7 +69,13 @@ install_packages() {
     local -a packages=("$@")
     debug "Installing packages: ${packages[*]}"
     if [[ "$DRY_RUN" == false ]]; then
-        DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"
+        # Add timeout to prevent hanging on package installation
+        if ! timeout 900 env DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"; then
+            error "Package installation timed out or failed: ${packages[*]}"
+            warn "This may indicate a network issue or package conflict"
+            warn "Try running: apt-get install -y ${packages[*]}"
+            return 1
+        fi
     fi
 }
 
