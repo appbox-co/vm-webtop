@@ -31,8 +31,8 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; }
 check_dependencies() {
     info "Checking dependencies..."
     
-    # Check if selkies is installed
-    if [[ ! -f /usr/share/selkies/www/index.html ]]; then
+    # Check if selkies is installed by checking for selkies systemd service
+    if [[ ! -f /etc/systemd/system/selkies.service ]]; then
         error "Selkies base framework not found. Please install selkies first."
         exit 1
     fi

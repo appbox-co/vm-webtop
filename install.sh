@@ -560,17 +560,23 @@ install_component() {
     
     # Execute component installer
     if [[ "$DRY_RUN" == false ]]; then
+        local original_dir="$PWD"
         cd "$component_dir"
-        if ./install.sh; then
-            info "✓ Component $component_name installed successfully"
+        
+        debug "Running component installer for $component_name"
+        if timeout 300 ./install.sh; then
+            debug "Component installer completed successfully"
+            cd "$original_dir"
+            return 0
         else
-            error "Failed to install component: $component_name"
-            cd "$SCRIPT_DIR"
+            local exit_code=$?
+            error "Component installer failed with exit code: $exit_code"
+            cd "$original_dir"
             return 1
         fi
-        cd "$SCRIPT_DIR"
     else
-        info "✓ Component $component_name would be installed (dry run)"
+        debug "Component $component_name would be installed (dry run)"
+        return 0
     fi
 }
 
@@ -626,14 +632,27 @@ install_all_components() {
     local components=("selkies" "webtop")
     local total_components=${#components[@]}
     local current=0
+    local failed_components=()
     
     for component in "${components[@]}"; do
         ((current++))
         show_progress "$current" "$total_components" "Installing $component"
-        install_component "$component"
+        
+        info "Installing component: $component"
+        if install_component "$component"; then
+            info "✓ Component $component installed successfully"
+        else
+            error "✗ Component $component failed to install"
+            failed_components+=("$component")
+        fi
     done
     
-    info "✓ All components installed successfully"
+    if [[ ${#failed_components[@]} -eq 0 ]]; then
+        info "✓ All components installed successfully"
+    else
+        warn "Some components failed to install: ${failed_components[*]}"
+        warn "You can retry individual components with: ./install.sh --component <name>"
+    fi
 }
 
 cleanup() {
