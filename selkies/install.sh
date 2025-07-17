@@ -9,11 +9,159 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Source utilities from master script
-if [[ -f "$PARENT_DIR/install.sh" ]]; then
-    # Extract utility functions from master script
-    source <(grep -A 1000 "^# UTILITY FUNCTIONS" "$PARENT_DIR/install.sh" | grep -B 1000 "^# MAIN INSTALLATION PROCESS" | head -n -1)
+# Color codes for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Global variables
+LOG_FILE="/var/log/ubuntu-vm-webtop-install.log"
+VERBOSE=false
+DRY_RUN=false
+
+# Ensure log directory exists and is writable
+if [[ $EUID -eq 0 ]]; then
+    mkdir -p "$(dirname "$LOG_FILE")"
+    if [[ ! -w "$(dirname "$LOG_FILE")" ]]; then
+        LOG_FILE="$SCRIPT_DIR/ubuntu-vm-webtop-install.log"
+    fi
+else
+    LOG_FILE="$SCRIPT_DIR/ubuntu-vm-webtop-install.log"
 fi
+
+# Logging functions
+log() {
+    local level="$1"
+    shift
+    local message="$*"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    case "$level" in
+        "INFO")  echo -e "${GREEN}[INFO]${NC} $message" | tee -a "$LOG_FILE" ;;
+        "WARN")  echo -e "${YELLOW}[WARN]${NC} $message" | tee -a "$LOG_FILE" ;;
+        "ERROR") echo -e "${RED}[ERROR]${NC} $message" | tee -a "$LOG_FILE" ;;
+        "DEBUG") [[ "$VERBOSE" == true ]] && echo -e "${BLUE}[DEBUG]${NC} $message" | tee -a "$LOG_FILE" ;;
+    esac
+    
+    echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
+}
+
+info() { log "INFO" "$@"; }
+warn() { log "WARN" "$@"; }
+error() { log "ERROR" "$@"; }
+debug() { log "DEBUG" "$@"; }
+
+# Package management functions
+update_package_cache() {
+    debug "Updating package cache..."
+    if [[ "$DRY_RUN" == false ]]; then
+        apt-get update -qq
+    fi
+}
+
+install_packages() {
+    local -a packages=("$@")
+    debug "Installing packages: ${packages[*]}"
+    if [[ "$DRY_RUN" == false ]]; then
+        DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"
+    fi
+}
+
+# File operations functions
+copy_rootfs() {
+    local source_dir="$1"
+    local target_dir="${2:-/}"
+    
+    debug "Copying rootfs from $source_dir to $target_dir"
+    
+    if [[ ! -d "$source_dir" ]]; then
+        warn "Source directory does not exist: $source_dir"
+        return 1
+    fi
+    
+    if [[ "$DRY_RUN" == false ]]; then
+        # Use rsync for better handling of permissions and symlinks
+        if command -v rsync &> /dev/null; then
+            rsync -av --no-owner --no-group "$source_dir/" "$target_dir/"
+        else
+            # Fallback to cp
+            cp -r "$source_dir/"* "$target_dir/"
+        fi
+    fi
+}
+
+# Systemd functions
+reload_systemd() {
+    debug "Reloading systemd daemon..."
+    if [[ "$DRY_RUN" == false ]]; then
+        systemctl daemon-reload
+    fi
+}
+
+enable_service() {
+    local service_name="$1"
+    debug "Enabling systemd service: $service_name"
+    if [[ "$DRY_RUN" == false ]]; then
+        systemctl enable "$service_name"
+    fi
+}
+
+create_directories() {
+    local -a dirs=("$@")
+    debug "Creating directories: ${dirs[*]}"
+    if [[ "$DRY_RUN" == false ]]; then
+        for dir in "${dirs[@]}"; do
+            mkdir -p "$dir"
+        done
+    fi
+}
+
+set_permissions() {
+    local path="$1"
+    local owner="$2"
+    local permissions="$3"
+    
+    debug "Setting permissions on $path: $owner:$permissions"
+    if [[ "$DRY_RUN" == false ]]; then
+        if [[ -e "$path" ]]; then
+            chown -R "$owner" "$path"
+            chmod -R "$permissions" "$path"
+        fi
+    fi
+}
+
+create_system_user() {
+    local username="$1"
+    local home_dir="$2"
+    local shell="${3:-/bin/bash}"
+    local create_home="${4:-true}"
+    
+    debug "Creating system user: $username"
+    
+    if id "$username" &>/dev/null; then
+        debug "User $username already exists"
+        return 0
+    fi
+    
+    if [[ "$DRY_RUN" == false ]]; then
+        local useradd_opts=("-r" "-s" "$shell")
+        
+        if [[ "$create_home" == true ]]; then
+            useradd_opts+=("-m" "-d" "$home_dir")
+        else
+            useradd_opts+=("-M")
+        fi
+        
+        useradd "${useradd_opts[@]}" "$username"
+        
+        if [[ "$create_home" == true && ! -d "$home_dir" ]]; then
+            mkdir -p "$home_dir"
+            chown "$username:$username" "$home_dir"
+        fi
+    fi
+}
 
 info "Starting Selkies Framework with Xvfb installation (Phase 3)"
 info "This will install Selkies GStreamer remote desktop framework"

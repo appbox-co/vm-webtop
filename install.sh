@@ -19,8 +19,15 @@ VERBOSE=false
 DRY_RUN=false
 COMPONENT_ONLY=""
 
-# Ensure log directory exists
-mkdir -p "$(dirname "$LOG_FILE")"
+# Ensure log directory exists and is writable
+if [[ $EUID -eq 0 ]]; then
+    mkdir -p "$(dirname "$LOG_FILE")"
+    if [[ ! -w "$(dirname "$LOG_FILE")" ]]; then
+        LOG_FILE="$SCRIPT_DIR/ubuntu-vm-webtop-install.log"
+    fi
+else
+    LOG_FILE="$SCRIPT_DIR/ubuntu-vm-webtop-install.log"
+fi
 
 # =============================================================================
 # UTILITY FUNCTIONS
@@ -523,11 +530,17 @@ install_component() {
     # Execute component installer
     if [[ "$DRY_RUN" == false ]]; then
         cd "$component_dir"
-        ./install.sh
+        if ./install.sh; then
+            info "✓ Component $component_name installed successfully"
+        else
+            error "Failed to install component: $component_name"
+            cd "$SCRIPT_DIR"
+            return 1
+        fi
         cd "$SCRIPT_DIR"
+    else
+        info "✓ Component $component_name would be installed (dry run)"
     fi
-    
-    info "✓ Component $component_name installed successfully"
 }
 
 # =============================================================================
