@@ -581,13 +581,28 @@ setup_docker_in_docker() {
 setup_locales() {
     info "Setting up locales..."
     
-    # Enable locales
-    sed -i '/locale/d' /etc/dpkg/dpkg.cfg.d/excludes
+    # Enable locales (only if excludes file exists - LinuxServer.io specific)
+    if [[ -f /etc/dpkg/dpkg.cfg.d/excludes ]]; then
+        debug "Found dpkg excludes file, enabling locales"
+        sed -i '/locale/d' /etc/dpkg/dpkg.cfg.d/excludes
+    else
+        debug "No dpkg excludes file found, skipping locale exclusion removal"
+    fi
     
     # Install locales from lang-stash
-    for locale in $(curl -sL https://raw.githubusercontent.com/thelamer/lang-stash/master/langs); do
-        localedef -i "$locale" -f UTF-8 "$locale".UTF-8 || true
+    debug "Installing locales from lang-stash..."
+    for locale in $(curl -sL https://raw.githubusercontent.com/thelamer/lang-stash/master/langs 2>/dev/null || echo ""); do
+        if [[ -n "$locale" ]]; then
+            debug "Installing locale: $locale"
+            localedef -i "$locale" -f UTF-8 "$locale".UTF-8 || warn "Failed to install locale: $locale"
+        fi
     done
+    
+    # Ensure basic locales are available
+    if ! locale -a | grep -q "en_US.utf8"; then
+        debug "Installing basic en_US.UTF-8 locale"
+        localedef -i en_US -f UTF-8 en_US.UTF-8 || warn "Failed to install en_US.UTF-8 locale"
+    fi
     
     info "✓ Locale setup completed"
 }
