@@ -8,6 +8,10 @@ set -euo pipefail
 # Set non-interactive mode globally to prevent apt hangs
 export DEBIAN_FRONTEND=noninteractive
 
+# Configure needrestart to prevent interactive prompts
+export NEEDRESTART_MODE=a
+export NEEDRESTART_SUSPEND=1
+
 # Get the directory of this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PARENT_DIR="$(dirname "$SCRIPT_DIR")"

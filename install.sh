@@ -8,6 +8,10 @@ set -euo pipefail
 # Set non-interactive mode globally to prevent apt hangs
 export DEBIAN_FRONTEND=noninteractive
 
+# Configure needrestart to prevent interactive prompts
+export NEEDRESTART_MODE=a
+export NEEDRESTART_SUSPEND=1
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
