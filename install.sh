@@ -486,6 +486,15 @@ extract_from_docker_image() {
     debug "Extracting $source_path from $image_name to $dest_path"
     
     if [[ "$DRY_RUN" == false ]]; then
+        # Check if Docker is running
+        if ! docker info &>/dev/null; then
+            warn "Docker is not running. Attempting to start..."
+            systemctl start docker || service docker start || {
+                error "Failed to start Docker service"
+                return 1
+            }
+            sleep 2
+        fi
         local container_id=$(docker create "$image_name")
         docker cp "$container_id:$source_path" "$dest_path"
         docker rm "$container_id"
@@ -498,6 +507,15 @@ pull_docker_image() {
     debug "Pulling Docker image: $image_name"
     
     if [[ "$DRY_RUN" == false ]]; then
+        # Check if Docker is running
+        if ! docker info &>/dev/null; then
+            warn "Docker is not running. Attempting to start..."
+            systemctl start docker || service docker start || {
+                error "Failed to start Docker service"
+                return 1
+            }
+            sleep 2
+        fi
         docker pull "$image_name"
     fi
 }
@@ -566,12 +584,25 @@ setup_environment() {
         apt-transport-https \
         ca-certificates \
         software-properties-common \
-        rsync \
-        docker.io
+        rsync
+    
+    # Install Docker if not already present
+    if ! command -v docker &> /dev/null; then
+        info "Installing Docker..."
+        install_packages docker.io
+    else
+        info "Docker is already installed"
+    fi
     
     # Start Docker service for image extractions
-    systemctl start docker
-    systemctl enable docker
+    if systemctl is-system-running --quiet || systemctl is-system-running | grep -q "degraded"; then
+        systemctl start docker || warn "Failed to start Docker service"
+        systemctl enable docker || warn "Failed to enable Docker service"
+    else
+        warn "Systemd not running properly, Docker service management skipped"
+        # Try to start Docker manually if possible
+        service docker start 2>/dev/null || true
+    fi
     
     info "✓ Environment setup completed"
 }
