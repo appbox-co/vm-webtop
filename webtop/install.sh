@@ -183,10 +183,15 @@ install_rootfs_files() {
 configure_environment() {
     info "Configuring webtop environment..."
     
+    # Ensure /etc/environment ends with a newline if it exists
+    if [[ -f /etc/environment ]] && [[ -n "$(tail -c1 /etc/environment)" ]]; then
+        echo >> /etc/environment
+    fi
+    
     # Add webtop environment variables
     cat "$SCRIPT_DIR/rootfs/etc/environment" >> /etc/environment
     
-    # Remove duplicate entries
+    # Sort and remove any duplicates
     sort /etc/environment | uniq > /tmp/environment.tmp
     mv /tmp/environment.tmp /etc/environment
     
