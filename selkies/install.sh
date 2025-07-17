@@ -163,6 +163,31 @@ create_system_user() {
     fi
 }
 
+# Docker utility functions
+extract_from_docker_image() {
+    local image_name="$1"
+    local source_path="$2"
+    local dest_path="$3"
+    
+    debug "Extracting $source_path from $image_name to $dest_path"
+    
+    if [[ "$DRY_RUN" == false ]]; then
+        local container_id=$(docker create "$image_name")
+        docker cp "$container_id:$source_path" "$dest_path"
+        docker rm "$container_id"
+    fi
+}
+
+pull_docker_image() {
+    local image_name="$1"
+    
+    debug "Pulling Docker image: $image_name"
+    
+    if [[ "$DRY_RUN" == false ]]; then
+        docker pull "$image_name"
+    fi
+}
+
 info "Starting Selkies Framework with Xvfb installation (Phase 3)"
 info "This will install Selkies GStreamer remote desktop framework"
 
