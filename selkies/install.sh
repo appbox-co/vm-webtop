@@ -82,6 +82,27 @@ install_packages() {
     fi
 }
 
+install_packages_with_timeout() {
+    local timeout_seconds="$1"
+    shift
+    local -a packages=("$@")
+    
+    debug "Installing packages with ${timeout_seconds}s timeout: ${packages[*]}"
+    if [[ "$DRY_RUN" == false ]]; then
+        # Use custom timeout for package installation
+        if ! timeout "$timeout_seconds" apt-get install -y "${packages[@]}"; then
+            error "Package installation timed out or failed after ${timeout_seconds}s: ${packages[*]}"
+            warn "This may indicate a network issue, slow mirror, or package conflict"
+            warn "Try these solutions:"
+            warn "  1. Run manually: apt-get install -y ${packages[*]}"
+            warn "  2. Check network: ping archive.ubuntu.com"
+            warn "  3. Change mirror: sed -i 's/archive.ubuntu.com/mirror.example.com/g' /etc/apt/sources.list"
+            warn "  4. Clear apt cache: apt-get clean && apt-get update"
+            return 1
+        fi
+    fi
+}
+
 # File operations functions
 copy_rootfs() {
     local source_dir="$1"
@@ -243,16 +264,25 @@ install_dev_dependencies() {
     info "Installing development dependencies..."
     
     update_package_cache
-    install_packages \
-        libopus-dev \
-        libpulse-dev \
-        python3-dev \
-        python3-pip \
+    
+    # Install packages in smaller groups to avoid timeouts
+    info "Installing build tools..."
+    install_packages_with_timeout 1200 \
         cmake \
         git \
         gcc \
         g++ \
         make
+    
+    info "Installing development libraries..."
+    install_packages_with_timeout 1200 \
+        libopus-dev \
+        libpulse-dev
+    
+    info "Installing Python development tools..."
+    install_packages_with_timeout 1200 \
+        python3-dev \
+        python3-pip
 }
 
 # =============================================================================
@@ -277,42 +307,61 @@ setup_repositories() {
 # =============================================================================
 
 install_main_packages() {
-    info "Installing main packages (60+ packages)..."
+    info "Installing main packages in groups to avoid timeouts..."
     
-    # Install all packages from Dockerfile
-    install_packages \
-        breeze-cursor-theme \
+    # Group 1: Core system packages
+    info "Installing core system packages..."
+    install_packages_with_timeout 1200 \
         ca-certificates \
-        cmake \
         console-data \
-        containerd.io \
         dbus-x11 \
+        file \
+        kbd \
+        locales-all \
+        openssh-client \
+        openssl \
+        pciutils \
+        procps \
+        software-properties-common \
+        ssl-cert \
+        sudo \
+        tar \
+        util-linux \
+        zlib1g
+    
+    # Group 2: Docker packages
+    info "Installing Docker packages..."
+    install_packages_with_timeout 1200 \
+        containerd.io \
         docker-buildx-plugin \
         docker-ce \
         docker-ce-cli \
         docker-compose-plugin \
-        dunst \
-        file \
-        fonts-noto-cjk \
-        fonts-noto-color-emoji \
-        fonts-noto-core \
-        fuse-overlayfs \
+        fuse-overlayfs
+    
+    # Group 3: Development tools
+    info "Installing development tools..."
+    install_packages_with_timeout 1200 \
+        cmake \
         g++ \
         gcc \
         git \
-        intel-media-va-driver \
-        kbd \
+        make \
+        nodejs \
+        python3 \
+        python3-distutils-extra
+    
+    # Group 4: Basic X11 libraries
+    info "Installing basic X11 libraries..."
+    install_packages_with_timeout 1800 \
         libev4 \
         libfontenc1 \
         libfreetype6 \
         libgbm1 \
         libgcrypt20 \
         libgirepository-1.0-1 \
-        libgl1-mesa-dri \
-        libglu1-mesa \
         libgnutls30 \
         libjpeg-turbo8 \
-        libnginx-mod-http-fancyindex \
         libnotify-bin \
         libopus0 \
         libp11-kit0 \
@@ -331,30 +380,45 @@ install_main_packages() {
         libxfont2 \
         libxinerama1 \
         libxshmfence1 \
-        libxtst6 \
-        locales-all \
-        make \
+        libxtst6
+    
+    # Group 5: Mesa and graphics drivers
+    info "Installing Mesa and graphics drivers..."
+    install_packages_with_timeout 1800 \
+        intel-media-va-driver \
+        libgl1-mesa-dri \
+        libglu1-mesa \
         mesa-libgallium \
         mesa-va-drivers \
         mesa-vulkan-drivers \
+        vulkan-tools
+    
+    # Group 6: Fonts and themes
+    info "Installing fonts and themes..."
+    install_packages_with_timeout 1200 \
+        breeze-cursor-theme \
+        fonts-noto-cjk \
+        fonts-noto-color-emoji \
+        fonts-noto-core \
+        xfonts-base
+    
+    # Group 7: Desktop environment and utilities
+    info "Installing desktop environment and utilities..."
+    install_packages_with_timeout 1200 \
+        dunst \
+        libnginx-mod-http-fancyindex \
         nginx \
-        nodejs \
         openbox \
-        openssh-client \
-        openssl \
-        pciutils \
-        procps \
         pulseaudio \
         pulseaudio-utils \
-        python3 \
-        python3-distutils-extra \
-        software-properties-common \
-        ssl-cert \
         stterm \
-        sudo \
-        tar \
-        util-linux \
-        vulkan-tools \
+        xdg-utils \
+        xdotool \
+        xfconf
+    
+    # Group 8: X11 utilities and tools
+    info "Installing X11 utilities and tools..."
+    install_packages_with_timeout 1200 \
         x11-apps \
         x11-common \
         x11-utils \
@@ -362,23 +426,22 @@ install_main_packages() {
         x11-xserver-utils \
         xauth \
         xcvt \
-        xdg-utils \
-        xdotool \
-        xfconf \
-        xfonts-base \
         xkb-data \
         xsel \
+        xterm \
+        xutils \
+        xvfb
+    
+    # Group 9: X server and drivers
+    info "Installing X server and graphics drivers..."
+    install_packages_with_timeout 1800 \
         xserver-common \
         xserver-xorg-core \
         xserver-xorg-video-amdgpu \
         xserver-xorg-video-ati \
         xserver-xorg-video-intel \
         xserver-xorg-video-nouveau \
-        xserver-xorg-video-qxl \
-        xterm \
-        xutils \
-        xvfb \
-        zlib1g
+        xserver-xorg-video-qxl
     
     info "✓ Main packages installed successfully"
 }
