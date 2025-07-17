@@ -8,6 +8,9 @@
 
 set -euo pipefail
 
+# Set non-interactive mode globally to prevent apt hangs
+export DEBIAN_FRONTEND=noninteractive
+
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -69,7 +72,7 @@ setup_repositories() {
         /etc/apt/sources.list.d/xtradeb.list
     
     # Update package lists
-    apt-get update
+    timeout 300 apt-get update
     
     success "✓ Repository setup completed"
 }
@@ -82,8 +85,7 @@ install_xfce_packages() {
     info "Installing XFCE packages..."
     
     # Install XFCE desktop environment and related packages
-    DEBIAN_FRONTEND=noninteractive \
-    apt-get install --no-install-recommends -y \
+    timeout 900 apt-get install --no-install-recommends -y \
         chromium \
         mousepad \
         xfce4-terminal \
@@ -221,7 +223,7 @@ cleanup_installation() {
     info "Cleaning up installation..."
     
     # Clean package cache
-    apt-get autoclean
+    timeout 60 apt-get autoclean
     
     # Remove temporary files
     rm -rf \

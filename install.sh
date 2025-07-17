@@ -5,6 +5,9 @@ set -euo pipefail
 # Phase 2: Foundation
 # Version: 1.0.0
 
+# Set non-interactive mode globally to prevent apt hangs
+export DEBIAN_FRONTEND=noninteractive
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -457,7 +460,7 @@ install_packages() {
     
     if [[ "$DRY_RUN" == false ]]; then
         # Add timeout to prevent hanging on package installation
-        if ! timeout 900 env DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"; then
+        if ! timeout 900 apt-get install -y "${packages[@]}"; then
             error "Package installation timed out or failed: ${packages[*]}"
             warn "This may indicate a network issue or package conflict"
             warn "Try running: apt-get install -y ${packages[*]}"

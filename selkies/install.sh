@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+# Set non-interactive mode globally to prevent apt hangs
+export DEBIAN_FRONTEND=noninteractive
+
 # Get the directory of this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PARENT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -70,7 +73,7 @@ install_packages() {
     debug "Installing packages: ${packages[*]}"
     if [[ "$DRY_RUN" == false ]]; then
         # Add timeout to prevent hanging on package installation
-        if ! timeout 900 env DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"; then
+        if ! timeout 900 apt-get install -y "${packages[@]}"; then
             error "Package installation timed out or failed: ${packages[*]}"
             warn "This may indicate a network issue or package conflict"
             warn "Try running: apt-get install -y ${packages[*]}"
