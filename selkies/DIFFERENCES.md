@@ -149,7 +149,7 @@ This document outlines the differences between the original `docker-baseimage-se
 
 ### Maintained Features:
 - All original functionality preserved
-- Same web interface accessibility (port 3000)
+- Same web interface accessibility (port 443)
 - Same environment variables and configuration options
 - Same build dependencies and source compilation
 - Same user experience and desktop environment

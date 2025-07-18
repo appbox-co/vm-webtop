@@ -58,7 +58,7 @@ Create a script-based installation system to recreate the functionality of the L
 - **Base Image**: `ghcr.io/linuxserver/baseimage-selkies:ubuntunoble`
 - **Primary Function**: XFCE desktop environment with web interface
 - **Key Packages**: chromium, mousepad, xfce4-terminal, xfce4, xubuntu-default-settings, xubuntu-icon-theme
-- **Port**: 3000
+- **Port**: 443
 - **Custom Modifications**:
   - Chromium desktop wrapper (`/usr/local/bin/wrapped-chromium`)
   - Binary relocations (exo-open, thunar, chromium)

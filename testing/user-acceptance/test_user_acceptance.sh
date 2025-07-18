@@ -29,27 +29,24 @@ log_test() { echo "[TEST] $1"; }
 test_web_interface_accessibility() {
     log_test "Testing web interface accessibility..."
     
-    # Test web interface is accessible
-    local response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000)
-    if [[ "$response" != "200" ]]; then
-        log_fail "Web interface is not accessible (HTTP $response)"
+    # Test basic connectivity
+    local response=$(curl -s -o /dev/null -w "%{http_code}" https://localhost:443)
+    if [[ "$response" == "200" ]]; then
+        log_pass "Web interface is accessible"
+    else
+        log_fail "Web interface returned HTTP $response"
         return $FAIL
     fi
     
-    # Test web interface loads correctly
-    local content=$(curl -s http://localhost:3000)
-    if [[ -z "$content" ]]; then
-        log_fail "Web interface returns empty content"
+    # Test content delivery
+    local content=$(curl -s https://localhost:443)
+    if [[ "$content" == *"selkies"* ]]; then
+        log_pass "Web interface serves expected content"
+    else
+        log_fail "Web interface does not serve expected content"
         return $FAIL
     fi
     
-    # Test if web interface contains expected elements
-    if ! echo "$content" | grep -qi "selkies"; then
-        log_fail "Web interface does not contain expected content"
-        return $FAIL
-    fi
-    
-    log_pass "Web interface is accessible and functional"
     return $PASS
 }
 
@@ -303,7 +300,7 @@ test_web_interface_interaction() {
     local endpoints=("/" "/websocket")
     
     for endpoint in "${endpoints[@]}"; do
-        local response=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:3000$endpoint")
+        local response=$(curl -s -o /dev/null -w "%{http_code}" "https://localhost:443$endpoint")
         if [[ "$response" != "200" && "$response" != "404" && "$response" != "426" ]]; then
             log_fail "Web interface endpoint $endpoint returned unexpected response: $response"
             return $FAIL
@@ -311,7 +308,7 @@ test_web_interface_interaction() {
     done
     
     # Test if WebSocket endpoint is accessible
-    if ! curl -s -f http://localhost:8082 >/dev/null 2>&1; then
+    if ! curl -s -f https://localhost:8082 >/dev/null 2>&1; then
         log_fail "WebSocket endpoint is not accessible"
         return $FAIL
     fi
@@ -350,7 +347,7 @@ test_system_responsiveness() {
     
     # Test web interface response time
     local start_time=$(date +%s.%3N)
-    curl -s -f http://localhost:3000 >/dev/null 2>&1
+    curl -s -f https://localhost:443 >/dev/null 2>&1
     local end_time=$(date +%s.%3N)
     local response_time=$(echo "$end_time - $start_time" | bc)
     

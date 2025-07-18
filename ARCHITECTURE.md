@@ -260,7 +260,7 @@ selkies.service
     ↓
 webtop-de.service
     ↓
-Ready for Web Access (Port 3000)
+Ready for Web Access (Port 443)
 ```
 
 ## Service Conversion Strategy
@@ -333,7 +333,7 @@ All configuration files are organized in each component's `rootfs/` folder:
 ```
 External User
     ↓
-Port 3000 (HTTP/HTTPS)
+Port 443 (HTTPS)
     ↓
 Nginx (selkies-nginx.service)
     ↓

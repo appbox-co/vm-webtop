@@ -867,7 +867,7 @@ main() {
     info ""
     info "To start all services: systemctl start selkies-desktop"
     info "To check status: systemctl status selkies"
-    info "Web interface will be available at: http://localhost:3000"
+    info "Web interface will be available at: https://localhost:443"
 }
 
 # Run main installation

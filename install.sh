@@ -816,7 +816,7 @@ main() {
         echo "Installation Complete!"
         echo "========================================"
         echo "You can now access the webtop at:"
-        echo "  http://localhost:3000"
+        echo "  https://localhost:443"
         echo ""
         echo "To check service status:"
         echo "  systemctl status selkies"

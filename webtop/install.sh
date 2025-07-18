@@ -315,7 +315,7 @@ main() {
     info "To check status:"
     info "  systemctl status selkies-desktop"
     info ""
-    info "Web interface available at: http://localhost:3000"
+    info "Web interface available at: https://localhost:443"
     info "Title: Ubuntu XFCE"
 }
 

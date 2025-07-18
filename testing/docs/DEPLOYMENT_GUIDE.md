@@ -114,7 +114,7 @@ systemctl status selkies-nginx
 systemctl status xvfb
 
 # Test web interface
-curl -I http://localhost:3000
+curl -I https://localhost:443
 ```
 
 ### 3. Configure Selkies
@@ -154,7 +154,7 @@ systemctl restart selkies-desktop
 pgrep -af "xfce4-session"
 
 # Test web interface with XFCE
-curl -I http://localhost:3000
+curl -I https://localhost:443
 ```
 
 ### 3. Verify Webtop Integration
@@ -224,8 +224,7 @@ cat /tmp/webtop-tests/security-report.txt
 ```bash
 # Set up firewall
 ufw enable
-ufw allow 3000/tcp
-ufw allow 3001/tcp
+ufw allow 443/tcp
 
 # Configure SSL certificates
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
@@ -388,7 +387,7 @@ systemctl status selkies-nginx
 nginx -t
 
 # Check listening ports
-netstat -tlnp | grep :3000
+netstat -tlnp | grep :443
 ```
 
 #### Performance Issues

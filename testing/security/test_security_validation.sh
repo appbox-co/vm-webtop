@@ -112,7 +112,7 @@ test_network_security() {
     log_info "Testing network security..."
     
     # Check if only necessary ports are exposed
-    local allowed_ports=("3000" "3001" "8081" "8082" "9081")
+    local allowed_ports=("443" "8081" "8082" "9081")
     local listening_ports=$(netstat -tlnp | grep LISTEN | awk '{print $4}' | cut -d: -f2 | sort -u)
     
     for port in $listening_ports; do
@@ -130,7 +130,7 @@ test_network_security() {
     done
     
     # Check if web interface is not accessible from all interfaces
-    if netstat -tlnp | grep ":3000" | grep -q "0.0.0.0"; then
+    if netstat -tlnp | grep ":443" | grep -q "0.0.0.0"; then
         log_warning "Web interface is accessible from all interfaces"
     fi
     
@@ -178,11 +178,39 @@ test_service_security() {
     return $PASS
 }
 
-test_web_security() {
-    log_info "Testing web security..."
+test_port_security() {
+    log_info "Testing port security..."
     
-    # Check if web interface has proper security headers
-    local response_headers=$(curl -s -I http://localhost:3000 2>/dev/null)
+    # Define allowed ports (updated for HTTPS-only)
+    local allowed_ports=("443" "8081" "8082" "9081")
+    
+    # Test for exposed ports
+    local exposed_ports=$(netstat -tlnp | grep -E ":(443|8081|8082|9081)\b" | wc -l)
+    
+    if [[ $exposed_ports -gt 0 ]]; then
+        log_pass "Required ports are exposed"
+    else
+        log_fail "Required ports are not exposed"
+        return $FAIL
+    fi
+    
+    # Test for insecure bindings
+    if netstat -tlnp | grep ":443" | grep -q "0.0.0.0"; then
+        log_warning "Port 443 is bound to all interfaces (0.0.0.0)"
+    fi
+    
+    return $PASS
+}
+
+test_web_security() {
+    log_info "Testing web security headers..."
+    
+    # Test security headers
+    local response_headers=$(curl -s -I https://localhost:443 2>/dev/null)
+    if [[ -z "$response_headers" ]]; then
+        log_fail "Cannot connect to web interface"
+        return $FAIL
+    fi
     
     # Check for basic security headers
     if ! echo "$response_headers" | grep -qi "x-frame-options"; then
@@ -193,17 +221,17 @@ test_web_security() {
         log_warning "Missing X-Content-Type-Options header"
     fi
     
-    # Check if directory listing is disabled
-    local dir_listing_test=$(curl -s http://localhost:3000/test-nonexistent-dir/ 2>/dev/null)
-    if echo "$dir_listing_test" | grep -qi "index of"; then
-        log_fail "Directory listing is enabled (security risk)"
+    # Test directory listing
+    local dir_listing_test=$(curl -s https://localhost:443/test-nonexistent-dir/ 2>/dev/null)
+    if [[ "$dir_listing_test" == *"Index of"* ]]; then
+        log_fail "Directory listing is enabled"
         return $FAIL
     fi
     
-    # Check if default nginx status page is disabled
-    local status_test=$(curl -s http://localhost:3000/nginx_status 2>/dev/null)
-    if echo "$status_test" | grep -qi "nginx"; then
-        log_fail "Nginx status page is accessible (information disclosure)"
+    # Test status page
+    local status_test=$(curl -s https://localhost:443/nginx_status 2>/dev/null)
+    if [[ "$status_test" == *"Active connections"* ]]; then
+        log_fail "Nginx status page is accessible"
         return $FAIL
     fi
     

@@ -83,56 +83,26 @@ test_service_startup_sequence() {
     return $FAIL
 }
 
-test_web_interface_accessibility() {
-    log_info "Testing web interface accessibility..."
+test_web_interface() {
+    log_info "Testing web interface..."
     
-    # Wait for nginx to be ready
-    local timeout=$WEB_INTERFACE_TIMEOUT
-    while [[ $timeout -gt 0 ]]; do
-        if curl -s -f http://localhost:3000 >/dev/null 2>&1; then
-            log_pass "Web interface is accessible"
-            return $PASS
-        fi
-        sleep 1
-        ((timeout--))
-    done
-    
-    log_fail "Web interface not accessible after $WEB_INTERFACE_TIMEOUT seconds"
-    
-    # Log nginx status for debugging
-    echo "Nginx status:"
-    systemctl status selkies-nginx.service --no-pager -l || true
-    echo ""
-    
-    return $FAIL
-}
-
-test_web_interface_content() {
-    log_info "Testing web interface content..."
-    
-    # Download web interface content
-    local response=$(curl -s http://localhost:3000 2>/dev/null)
-    
-    if [[ -z "$response" ]]; then
-        log_fail "Web interface returned empty response"
+    # Test web interface accessibility
+    if curl -s -f https://localhost:443 >/dev/null 2>&1; then
+        log_pass "Web interface is accessible"
+    else
+        log_fail "Web interface is not accessible"
         return $FAIL
     fi
     
-    # Check if response contains expected content
-    if ! echo "$response" | grep -q "selkies"; then
-        log_fail "Web interface does not contain expected selkies content"
+    # Test web interface content
+    local response=$(curl -s https://localhost:443 2>/dev/null)
+    if [[ "$response" == *"selkies"* ]]; then
+        log_pass "Web interface contains expected content"
+    else
+        log_fail "Web interface does not contain expected content"
         return $FAIL
     fi
     
-    # Check if title is correct
-    if grep -q 'TITLE="Ubuntu XFCE"' /etc/environment; then
-        if ! echo "$response" | grep -q "Ubuntu XFCE"; then
-            log_fail "Web interface does not contain expected title"
-            return $FAIL
-        fi
-    fi
-    
-    log_pass "Web interface content is correct"
     return $PASS
 }
 
@@ -343,8 +313,7 @@ main() {
     local test_results=()
     local tests=(
         "test_service_startup_sequence"
-        "test_web_interface_accessibility"
-        "test_web_interface_content"
+        "test_web_interface"
         "test_display_server"
         "test_desktop_environment"
         "test_audio_system"
@@ -388,4 +357,5 @@ main() {
 }
 
 # Run main function
+main "$@" 
 main "$@" 

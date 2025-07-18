@@ -199,12 +199,12 @@ diagnose_network() {
         echo ""
         
         echo "==================== WEB INTERFACE TESTS ===================="
-        echo "Testing localhost:3000..."
-        curl -s -I http://localhost:3000 || echo "Web interface not accessible"
+        echo "Testing localhost:443..."
+        curl -s -I https://localhost:443 || echo "Web interface not accessible"
         echo ""
         
-        echo "Testing localhost:3001..."
-        curl -s -I http://localhost:3001 || echo "HTTPS interface not accessible"
+        echo "Testing localhost:443..."
+        curl -s -I https://localhost:443 || echo "HTTPS interface not accessible"
         echo ""
         
         echo "Testing localhost:8082..."
@@ -674,7 +674,7 @@ EOF
         <h2>Quick Status Check</h2>
         <p><strong>System Status:</strong> $(systemctl is-system-running 2>/dev/null || echo "Unknown")</p>
         <p><strong>Selkies Services:</strong> $(systemctl is-active selkies-desktop 2>/dev/null || echo "Not running")</p>
-        <p><strong>Web Interface:</strong> $(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo "Not accessible")</p>
+        <p><strong>Web Interface:</strong> $(curl -s -o /dev/null -w "%{http_code}" https://localhost:443 2>/dev/null || echo "Not accessible")</p>
         <p><strong>Docker Status:</strong> $(systemctl is-active docker 2>/dev/null || echo "Not running")</p>
     </div>
     
@@ -683,7 +683,7 @@ EOF
         <ol>
             <li>Check service status: <code>systemctl status selkies-desktop</code></li>
             <li>Review service logs: <code>journalctl -u selkies-desktop -f</code></li>
-            <li>Verify web interface: <code>curl -I http://localhost:3000</code></li>
+            <li>Verify web interface: <code>curl -I https://localhost:443</code></li>
             <li>Check file permissions: <code>ls -la /config /defaults /usr/share/selkies</code></li>
             <li>Validate configuration: <code>nginx -t</code></li>
         </ol>
@@ -692,7 +692,7 @@ EOF
     <div class="section">
         <h2>Common Issues</h2>
         <ul>
-            <li><strong>Web interface not accessible:</strong> Check nginx service and port 3000</li>
+            <li><strong>Web interface not accessible:</strong> Check nginx service and port 443</li>
             <li><strong>Desktop not starting:</strong> Check xvfb and display server</li>
             <li><strong>Audio not working:</strong> Check pulseaudio service and modules</li>
             <li><strong>Docker not accessible:</strong> Check user permissions and docker group</li>

@@ -96,7 +96,7 @@ test_web_interface_response_time() {
     
     for i in $(seq 1 $requests); do
         local start_time=$(date +%s.%3N)
-        curl -s -f http://localhost:3000 >/dev/null 2>&1
+        curl -s -f https://localhost:443 >/dev/null 2>&1
         local end_time=$(date +%s.%3N)
         local request_time=$(echo "$end_time - $start_time" | bc)
         total_time=$(echo "$total_time + $request_time" | bc)

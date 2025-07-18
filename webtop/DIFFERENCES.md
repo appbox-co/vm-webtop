@@ -176,7 +176,7 @@ webtop/
 - Same XFCE desktop environment
 - Same browser wrapper functionality
 - Same configuration file structure
-- Same web interface accessibility (port 3000)
+- Same web interface accessibility (port 443)
 - Same icon and branding
 
 ### Enhanced Features:

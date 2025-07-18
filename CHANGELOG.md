@@ -598,7 +598,7 @@ selkies-desktop.service (Desktop environment)
 
 ### Acceptance Criteria:
 - All original docker-webtop functionality preserved
-- Web interface accessible on port 3000
+- Web interface accessible on port 443
 - Desktop environment fully functional
 - Performance comparable to docker version
 

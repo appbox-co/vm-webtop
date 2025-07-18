@@ -5,7 +5,6 @@ NGINX_CONFIG=/etc/nginx/sites-available/default
 
 # user passed env vars
 CPORT="${CUSTOM_PORT:-443}"
-CHPORT="${CUSTOM_HTTPS_PORT:-443}"
 CUSER="${CUSTOM_USER:-abc}"
 SFOLDER="${SUBFOLDER:-/}"
 

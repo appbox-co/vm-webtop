@@ -196,10 +196,10 @@ sudo ./testing/test-framework.sh -c user-acceptance
 2. **Web Interface Testing**:
    ```bash
    # Test web interface accessibility
-   curl -I http://localhost:3000
+   curl -I https://localhost:443
    
    # Test HTTPS interface
-   curl -I -k https://localhost:3001
+   curl -I -k https://localhost:443
    
    # Test WebSocket endpoint
    curl -I http://localhost:8082
@@ -262,7 +262,7 @@ sudo ./testing/troubleshooting/diagnostic-tools.sh -l    # Logs
 ### Common Issues and Solutions
 
 #### 1. Web Interface Not Accessible
-**Symptoms**: Cannot access http://localhost:3000
+**Symptoms**: Cannot access https://localhost:443
 **Solutions**:
 ```bash
 # Check nginx service
@@ -272,7 +272,7 @@ systemctl status selkies-nginx
 nginx -t
 
 # Check listening ports
-netstat -tlnp | grep :3000
+netstat -tlnp | grep :443
 
 # Restart nginx service
 systemctl restart selkies-nginx
