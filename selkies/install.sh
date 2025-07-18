@@ -380,6 +380,7 @@ install_main_packages() {
     install_packages \
         dunst \
         libnginx-mod-http-fancyindex \
+        libnginx-mod-http-realip \
         nginx \
         openbox \
         pulseaudio \
