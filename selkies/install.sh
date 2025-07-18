@@ -836,15 +836,15 @@ main() {
     cp "$SCRIPT_DIR/rootfs/defaults"/* /defaults/
     chown -R abc:abc /defaults
     
-    # Enable systemd services
+    # Enable systemd services (only top-level services with WantedBy directives)
     info "Enabling systemd services..."
     enable_service "selkies-setup"
-    enable_service "xvfb"
-    enable_service "selkies-pulseaudio"
-    enable_service "selkies-docker"
-    enable_service "selkies-nginx"
     enable_service "selkies"
     enable_service "selkies-desktop"
+    
+    # Note: xvfb, selkies-pulseaudio, selkies-docker, and selkies-nginx services
+    # are started automatically by dependency chains and should not be enabled directly
+    # This prevents circular dependencies that caused services to be skipped at boot
     
     # Start Docker service
     systemctl start docker
@@ -856,12 +856,14 @@ main() {
     info "✅ Selkies installation completed successfully!"
     info "Services enabled:"
     info "  - selkies-setup.service (Device and permission setup)"
+    info "  - selkies.service (Main selkies process)"
+    info "  - selkies-desktop.service (Desktop environment)"
+    info ""
+    info "Dependency services (started automatically):"
     info "  - xvfb.service (Virtual display server)"
     info "  - selkies-pulseaudio.service (Audio server)"
     info "  - selkies-docker.service (Docker daemon)"
     info "  - selkies-nginx.service (Web server)"
-    info "  - selkies.service (Main selkies process)"
-    info "  - selkies-desktop.service (Desktop environment)"
     info ""
     info "To start all services: systemctl start selkies-desktop"
     info "To check status: systemctl status selkies"
