@@ -35,6 +35,8 @@ sed -i "s/443/$CPORT/g" ${NGINX_CONFIG}
 sed -i "s|SUBFOLDER|$SFOLDER|g" ${NGINX_CONFIG}
 sed -i "s|REPLACE_HOME|$HOME|g" ${NGINX_CONFIG}
 sed -i "s|SSL_KEY_FILE|$SSL_KEY_FILE|g" ${NGINX_CONFIG}
+
+# nginx-extras includes the realip module by default
 mkdir -p $HOME/Desktop
 chown abc:abc $HOME/Desktop
 
