@@ -1,7 +1,7 @@
 [Unit]
 Description=Selkies GStreamer Remote Desktop
-After=selkies-nginx.service
-Requires=selkies-nginx.service
+After=selkies-nginx.service selkies-setup.service
+Requires=selkies-nginx.service selkies-setup.service
 
 [Service]
 Type=simple
@@ -23,6 +23,7 @@ Environment=LD_PRELOAD=/usr/lib/selkies_joystick_interposer.so:/opt/lib/libudev.
 Environment=TITLE=Selkies
 Environment=DEV_MODE=
 ExecStartPre=/bin/bash /etc/selkies/init-selkies-config.sh
+ExecStartPre=/bin/bash -c 'until xdpyinfo -display :1 >/dev/null 2>&1; do echo "Waiting for X server..."; sleep 1; done'
 ExecStart=/bin/bash -c 'rm -rf "${HOME}/.cache/gstreamer-1.0"; if [ ! -f "/dev/shm/audio.lock" ]; then until [ -f /defaults/pid ]; do sleep .5; done; pactl load-module module-null-sink sink_name="output" sink_properties=device.description="output"; pactl load-module module-null-sink sink_name="input" sink_properties=device.description="input"; touch /dev/shm/audio.lock; fi; exec selkies --addr="localhost" --port="8081" --enable_basic_auth="false" --enable_metrics_http="true" --metrics_http_port="9081" --mode="websockets"'
 WorkingDirectory=/config
 Restart=always

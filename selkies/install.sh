@@ -710,7 +710,7 @@ create_systemd_services() {
     info "Verifying systemd services in rootfs..."
     
     # Verify all systemd service files exist in rootfs
-    local services=("xvfb.service" "selkies-pulseaudio.service" "selkies-docker.service" "selkies-nginx.service" "selkies.service" "selkies-desktop.service")
+    local services=("selkies-setup.service" "xvfb.service" "selkies-pulseaudio.service" "selkies-docker.service" "selkies-nginx.service" "selkies.service" "selkies-desktop.service")
     
     for service in "${services[@]}"; do
         if [[ ! -f "$SCRIPT_DIR/rootfs/etc/systemd/system/$service" ]]; then
@@ -838,6 +838,7 @@ main() {
     
     # Enable systemd services
     info "Enabling systemd services..."
+    enable_service "selkies-setup"
     enable_service "xvfb"
     enable_service "selkies-pulseaudio"
     enable_service "selkies-docker"
@@ -853,7 +854,8 @@ main() {
     cleanup_installation
     
     info "✅ Selkies installation completed successfully!"
-    info "Services created:"
+    info "Services enabled:"
+    info "  - selkies-setup.service (Device and permission setup)"
     info "  - xvfb.service (Virtual display server)"
     info "  - selkies-pulseaudio.service (Audio server)"
     info "  - selkies-docker.service (Docker daemon)"

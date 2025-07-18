@@ -11,8 +11,8 @@ Environment=DISPLAY_DPI=96
 Environment=DRINODE=
 Environment=MAX_RES=7680x4320
 Environment=DISABLE_ZINK=false
-ExecStartPre=/bin/bash -c 'if ! which nvidia-smi && [ -e "/dev/dri/renderD128" ]; then VFBCOMMAND="-vfbdevice /dev/dri/renderD128"; fi; if [ ! -z ${DRINODE+x} ]; then VFBCOMMAND="-vfbdevice ${DRINODE}"; fi; echo "VFBCOMMAND=$VFBCOMMAND" > /tmp/xvfb_command'
-ExecStart=/bin/bash -c 'DEFAULT_RES="7680x4320"; if [ ! -z ${MAX_RES+x} ]; then DEFAULT_RES="${MAX_RES}"; fi; VFBCOMMAND=""; if [ -f /tmp/xvfb_command ]; then source /tmp/xvfb_command; fi; exec /usr/bin/Xvfb ${DISPLAY} -screen 0 "${DEFAULT_RES}x${DISPLAY_CDEPTH}" -dpi "${DISPLAY_DPI}" +extension "COMPOSITE" +extension "DAMAGE" +extension "GLX" +extension "RANDR" +extension "RENDER" +extension "MIT-SHM" +extension "XFIXES" +extension "XTEST" +iglx +render -nolisten "tcp" -ac -noreset -shmem ${VFBCOMMAND}'
+ExecStartPre=/bin/bash -c 'VFBCOMMAND=""; if ! which nvidia-smi >/dev/null 2>&1 && [ -e "/dev/dri/renderD128" ]; then VFBCOMMAND="-vfbdevice /dev/dri/renderD128"; fi; if [ -n "$DRINODE" ]; then VFBCOMMAND="-vfbdevice $DRINODE"; fi; echo "VFBCOMMAND=$VFBCOMMAND" > /tmp/xvfb_command'
+ExecStart=/bin/bash -c 'DEFAULT_RES="${MAX_RES:-7680x4320}"; VFBCOMMAND=""; if [ -f /tmp/xvfb_command ]; then source /tmp/xvfb_command; fi; exec /usr/bin/Xvfb $DISPLAY -screen 0 "${DEFAULT_RES}x${DISPLAY_CDEPTH}" -dpi "$DISPLAY_DPI" +extension "COMPOSITE" +extension "DAMAGE" +extension "GLX" +extension "RANDR" +extension "RENDER" +extension "MIT-SHM" +extension "XFIXES" +extension "XTEST" +iglx +render -nolisten "tcp" -ac -noreset -shmem $VFBCOMMAND'
 Restart=always
 RestartSec=5
 TimeoutStartSec=30

@@ -29,14 +29,14 @@ fi
 # Fullscreen everything in openbox unless the user explicitly disables it
 if [[ ! -z ${NO_FULL+x} ]] && [[ ! -f /fulllock ]]; then
   sed -i \
-    's|<maximized>yes</maximized>||g' \
+    's|</applications>|  <application class="*"> <maximized>true</maximized> </application>\n</applications>|' \
     /etc/xdg/openbox/rc.xml
   touch /fulllock
 fi
 
-# Add proot-apps
-if [ ! -f "${HOME}/.local/bin/proot-apps" ]; then
-  mkdir -p ${HOME}/.local/bin/
+# Proot apps folder
+if [[ ! -f $HOME/.local/bin/pversion ]]; then
+  mkdir -p $HOME/.local/bin
   cp /proot-apps/* ${HOME}/.local/bin/
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> $HOME/.bashrc
   chown abc:abc \
@@ -49,18 +49,10 @@ elif ! diff -q /proot-apps/pversion ${HOME}/.local/bin/pversion > /dev/null; the
   chown abc:abc ${HOME}/.local/bin/{ncat,proot-apps,proot,jq,pversion}
 fi
 
-# JS folder setup
-mkdir -pm1777 /dev/input
-touch /tmp/selkies_js.log
-mknod /dev/input/js0 c 13 0 || true
-mknod /dev/input/js1 c 13 1 || true
-mknod /dev/input/js2 c 13 2 || true
-mknod /dev/input/js3 c 13 3 || true
-mknod /dev/input/event1000 c 13 1064 || true
-mknod /dev/input/event1001 c 13 1065 || true
-mknod /dev/input/event1002 c 13 1066 || true
-mknod /dev/input/event1003 c 13 1067 || true
-chmod 777 /dev/input/js* /dev/input/event* /tmp/selkies* || true
+# Wait for device setup to complete
+while [[ ! -f /tmp/selkies_js.log ]]; do
+  sleep 0.1
+done
 
 # Manifest creation
 echo "{
