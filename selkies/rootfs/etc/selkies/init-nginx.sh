@@ -12,11 +12,12 @@ SFOLDER="${SUBFOLDER:-/}"
 # Find SSL key file in /etc/ssl/appbox/
 SSL_KEY_FILE=""
 if [ -d "/etc/ssl/appbox" ]; then
-  SSL_KEY_FILE=$(find /etc/ssl/appbox -name "*.key" -type f | head -1)
-  if [ -z "$SSL_KEY_FILE" ]; then
+  SSL_KEY_FULL_PATH=$(find /etc/ssl/appbox -name "*.key" -type f | head -1)
+  if [ -z "$SSL_KEY_FULL_PATH" ]; then
     echo "Error: No SSL key file found in /etc/ssl/appbox/"
     exit 1
   fi
+  SSL_KEY_FILE=$(basename "$SSL_KEY_FULL_PATH")
   echo "Using SSL key file: $SSL_KEY_FILE"
 else
   echo "Error: /etc/ssl/appbox directory not found"
@@ -31,7 +32,7 @@ fi
 
 # modify nginx config
 cp /defaults/default.conf ${NGINX_CONFIG}
-sed -i "s/443/$CPORT/g" ${NGINX_CONFIG}
+sed -i "s/PORT/$CPORT/g" ${NGINX_CONFIG}
 sed -i "s|SUBFOLDER|$SFOLDER|g" ${NGINX_CONFIG}
 sed -i "s|REPLACE_HOME|$HOME|g" ${NGINX_CONFIG}
 sed -i "s|SSL_KEY_FILE|$SSL_KEY_FILE|g" ${NGINX_CONFIG}
