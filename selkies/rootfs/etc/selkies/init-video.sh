@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Video device permissions check script
+# This script runs as user abc and only checks permissions
+# Actual permission setting is done by selkies-setup.service as root
+
+echo "Checking video device permissions..."
+
 FILES=$(find /dev/dri /dev/dvb -type c -print 2>/dev/null || true)
 
 for i in $FILES
@@ -14,24 +20,12 @@ do
             # check if group matches and that device has group rw
             if id -G abc | grep -qw "${VIDEO_GID}" && [ $(stat -c '%A' "${i}" | cut -b 5,6) = "rw" ]; then
                 echo "**** permissions for ${i} are good ****"
-            # check if device needs to be added to video group
-            elif ! id -G abc | grep -qw "${VIDEO_GID}"; then
-                # check if video group needs to be created
-                VIDEO_NAME=$(getent group "${VIDEO_GID}" | awk -F: '{print $1}')
-                if [ -z "${VIDEO_NAME}" ]; then
-                    VIDEO_NAME="video$(head /dev/urandom | tr -dc 'a-z0-9' | head -c4)"
-                    groupadd "${VIDEO_NAME}"
-                    groupmod -g "${VIDEO_GID}" "${VIDEO_NAME}"
-                    echo "**** creating video group ${VIDEO_NAME} with id ${VIDEO_GID} ****"
-                fi
-                echo "**** adding ${i} to video group ${VIDEO_NAME} with id ${VIDEO_GID} ****"
-                usermod -a -G "${VIDEO_NAME}" abc
-            fi
-            # check if device has group rw
-            if [ $(stat -c '%A' "${i}" | cut -b 5,6) != "rw" ]; then
-                echo -e "**** The device ${i} does not have group read/write permissions, attempting to fix inside the container.If it doesn't work, you can run the following on your docker host: ****\nsudo chmod g+rw ${i}\n"
-                chmod g+rw "${i}" || true
+            else
+                echo "**** Warning: User abc may not have proper access to ${i} ****"
+                echo "**** This should have been handled by selkies-setup.service ****"
             fi
         fi
     fi
-done 
+done
+
+echo "Video device permissions check completed." 

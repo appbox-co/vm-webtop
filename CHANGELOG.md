@@ -66,6 +66,43 @@ This document tracks the development progress of the Ubuntu VM Webtop Environmen
 
 ## Detailed Progress Log
 
+### 2025-07-18 - Service Fix: Video Permissions and Display Configuration (Agent: Assistant)
+
+#### Issue Addressed:
+- **Service Failure**: selkies-desktop.service failing due to permission issues with video device setup
+- **Root Cause**: init-video.sh script trying to run usermod as non-root user, causing "Permission denied" errors
+- **X11 Display Error**: xrandr configuration failing with "BadName" errors due to insufficient error handling
+
+#### Completed Tasks:
+1. **Video Permissions Fix** ✅
+   - Moved video device permissions setup from user-level script to root-level setup service
+   - Updated init-device-setup.sh to handle video device permissions during setup phase
+   - Modified init-video.sh to be a read-only permissions check script
+   - Removed problematic usermod calls from desktop service startup
+
+2. **Service Configuration Fix** ✅
+   - Updated selkies-desktop.service to remove init-video.sh call from ExecStartPre
+   - Video permissions now handled by selkies-setup.service which runs as root
+   - Proper dependency chain ensures setup runs before desktop service
+
+3. **Display Configuration Fix** ✅
+   - Enhanced svc-de.sh script with comprehensive error handling for xrandr commands
+   - Added proper display detection and fallback mechanisms
+   - Improved X server readiness checks with better logging
+   - Added graceful error handling for display mode creation failures
+
+#### Technical Changes:
+- **init-device-setup.sh**: Added video device permissions handling with proper error handling
+- **selkies-desktop.service**: Removed init-video.sh call to prevent permission issues
+- **init-video.sh**: Converted to read-only permissions check script
+- **svc-de.sh**: Enhanced with comprehensive error handling and better display configuration
+
+#### Fix Summary:
+- **Service Startup**: Resolved permission denied errors during service startup
+- **Display Configuration**: Fixed X11 display errors with proper error handling
+- **Video Permissions**: Moved to proper root-level setup phase
+- **Service Stability**: Improved overall service reliability and error recovery
+
 ### 2025-07-18 - Documentation Update and Status Review (Agent: Assistant)
 
 #### Completed Tasks:

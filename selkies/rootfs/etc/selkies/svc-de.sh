@@ -1,37 +1,44 @@
 #!/bin/bash
 
-# wait for X to be running
-while true; do
-  if xset q &>/dev/null; then
-    break
-  fi
-  sleep .5
+# Desktop environment startup script
+# This script runs as user abc and starts the desktop environment
+
+# wait for X server to be ready
+echo "Waiting for X server to be ready..."
+until xdpyinfo -display :1 >/dev/null 2>&1; do
+    echo "X server not ready, waiting..."
+    sleep 1
 done
+echo "X server is ready."
 
-# set the keyboard map by LC if known
-if [ ! -z "${LC_ALL}" ]; then
-  normalized_locale_full=${LC_ALL%%.*}
-  normalized_locale_lower=$(echo "$normalized_locale_full" | tr '[:upper:]' '[:lower:]')
+# set locale and keyboard
+if [ ! -z "$LANG" ]; then
+  export LANG="$LANG"
+fi
 
+# Set default keyboard layout
+XKB_LAYOUT_ARGS=""
+if [ ! -z "$KEYBOARD_LAYOUT" ]; then
+  XKB_LAYOUT_ARGS="$KEYBOARD_LAYOUT"
+elif [ ! -z "$LANG" ]; then
+  # Extract locale from LANG variable
+  normalized_locale=$(echo "$LANG" | sed 's/[._@].*//')
+  normalized_locale_lower=$(echo "$normalized_locale" | tr '[:upper:]' '[:lower:]')
+  
+  # Map common locales to keyboard layouts
   declare -A LOCALE_TO_XKB_MAP=(
-    ["af_za"]="za" ["am_et"]="et -variant am" ["ar_sa"]="sa" ["ar_eg"]="eg" ["ar"]="ara"
-    ["en_us"]="us" ["en_gb"]="gb" ["en_ca"]="ca -variant eng" ["en_au"]="au" ["en_ie"]="ie"
-    ["en_in"]="in -variant eng" ["en"]="us" ["es_es"]="es" ["es_mx"]="latam" ["es_ar"]="latam"
-    ["es_us"]="us -variant intl" ["es"]="es" ["fr_fr"]="fr" ["fr_ca"]="ca -variant fr"
-    ["fr_be"]="be" ["fr_ch"]="ch -variant fr" ["fr_lu"]="lu" ["fr"]="fr" ["de_de"]="de"
-    ["de_ch"]="ch -variant de" ["de_at"]="at" ["de_lu"]="lu" ["de_be"]="be" ["de"]="de"
-    ["it_it"]="it" ["it_ch"]="ch -variant it" ["it"]="it" ["ja_jp"]="jp" ["ko_kr"]="kr"
-    ["zh_cn"]="cn" ["zh_hk"]="hk" ["zh_sg"]="sg" ["zh_tw"]="tw" ["zh"]="cn" ["ru_ru"]="ru"
-    ["ru_ua"]="ua -variant ru" ["ru"]="ru" ["pt_pt"]="pt" ["pt_br"]="br" ["pt"]="pt"
-    ["pl_pl"]="pl" ["nl_nl"]="nl" ["nl_be"]="be" ["nl"]="nl" ["sv_se"]="se" ["sv_fi"]="fi -variant se"
-    ["sv"]="se" ["da_dk"]="dk" ["no"]="no" ["fi_fi"]="fi" ["cs_cz"]="cz" ["sk_sk"]="sk"
-    ["hu_hu"]="hu" ["el_gr"]="gr" ["el_cy"]="cy" ["el"]="gr" ["tr_tr"]="tr" ["tr"]="tr"
-    ["he_il"]="il" ["ar_sa"]="sa" ["th_th"]="th" ["vi_vn"]="vn" ["hi_in"]="in -variant hin"
-    ["bn_bd"]="bd -variant probhat" ["bn_in"]="in -variant ben" ["ta_in"]="in -variant tam"
-    ["te_in"]="in -variant tel" ["mr_in"]="in -variant mar" ["gu_in"]="in -variant guj"
-    ["kn_in"]="in -variant kan" ["ml_in"]="in -variant mal" ["or_in"]="in -variant ori"
-    ["pa_in"]="in -variant pan" ["as_in"]="in -variant asm" ["ur_in"]="in -variant urd"
-    ["ur_pk"]="pk -variant ur" ["fa_ir"]="ir" ["ps_af"]="ps" ["my_mm"]="mm" ["km_kh"]="kh"
+    ["en_us"]="us" ["en_gb"]="gb" ["de_de"]="de" ["fr_fr"]="fr" ["es_es"]="es" ["it_it"]="it"
+    ["pt_br"]="br" ["pt_pt"]="pt" ["ru_ru"]="ru" ["ja_jp"]="jp" ["ko_kr"]="kr" ["zh_cn"]="cn"
+    ["zh_tw"]="tw" ["ar_sa"]="ara" ["hi_in"]="in -variant hin" ["th_th"]="th" ["vi_vn"]="vn"
+    ["pl_pl"]="pl" ["cs_cz"]="cz -variant qwerty" ["hu_hu"]="hu" ["ro_ro"]="ro" ["bg_bg"]="bg"
+    ["hr_hr"]="hr" ["sk_sk"]="sk -variant qwerty" ["sl_si"]="si" ["et_ee"]="ee" ["lv_lv"]="lv"
+    ["lt_lt"]="lt" ["fi_fi"]="fi" ["sv_se"]="se" ["no_no"]="no" ["da_dk"]="dk" ["nl_nl"]="nl"
+    ["be_by"]="by" ["uk_ua"]="ua" ["mk_mk"]="mk" ["al_al"]="al" ["mt_mt"]="mt" ["is_is"]="is"
+    ["fo_fo"]="fo" ["ga_ie"]="ie" ["cy_gb"]="gb -variant colemak" ["gd_gb"]="gb -variant colemak"
+    ["ca_es"]="es -variant cat" ["eu_es"]="es" ["gl_es"]="es" ["oc_fr"]="fr" ["br_fr"]="fr"
+    ["co_fr"]="fr" ["wa_be"]="be" ["lb_lu"]="lu" ["de_at"]="at" ["de_ch"]="ch" ["fr_ch"]="ch -variant fr"
+    ["it_ch"]="ch" ["rm_ch"]="ch" ["fur_it"]="it" ["sc_it"]="it" ["lij_it"]="it" ["vec_it"]="it"
+    ["nap_it"]="it" ["scn_it"]="it" ["an_es"]="es" ["ast_es"]="es" ["ext_es"]="es" ["mwl_pt"]="pt"
     ["lo_la"]="la" ["si_lk"]="lk -variant sinhala_qwerty_us" ["ta_lk"]="lk -variant tam_unicode"
     ["ka_ge"]="ge" ["hy_am"]="am -variant eastern" ["az_az"]="az -variant latin" ["kk_kz"]="kz"
     ["ky_kg"]="kg" ["uz_uz"]="uz -variant latin" ["tg_tj"]="tj" ["mn_mn"]="mn" ["bo_cn"]="cn -variant tib"
@@ -43,33 +50,69 @@ if [ ! -z "${LC_ALL}" ]; then
     XKB_LAYOUT_ARGS="${LOCALE_TO_XKB_MAP[$normalized_locale_lower]}"
   fi
 fi
-if [ ! -z "$XKB_LAYOUT_ARGS" ]; then
-  setxkbmap ${XKB_LAYOUT_ARGS}
-fi
-chmod 777 /tmp/selkies* || true
 
-# set sane resolution before starting apps
-xrandr --newmode "1024x768" 63.50  1024 1072 1176 1328  768 771 775 798 -hsync +vsync
-xrandr --addmode screen "1024x768"
-xrandr --output screen --mode "1024x768" --dpi 96
+if [ ! -z "$XKB_LAYOUT_ARGS" ]; then
+  echo "Setting keyboard layout: $XKB_LAYOUT_ARGS"
+  setxkbmap ${XKB_LAYOUT_ARGS} 2>/dev/null || echo "Warning: Could not set keyboard layout"
+fi
+
+# Set permissions on temporary files
+chmod 777 /tmp/selkies* 2>/dev/null || true
+
+# Set sane resolution before starting apps with better error handling
+echo "Configuring display resolution..."
+
+# Check if xrandr is working
+if ! xrandr >/dev/null 2>&1; then
+    echo "Warning: xrandr is not available or not working properly"
+else
+    # Get current display info
+    CURRENT_DISPLAY=$(xrandr | grep " connected" | awk '{print $1}' | head -1)
+    if [ -z "$CURRENT_DISPLAY" ]; then
+        CURRENT_DISPLAY="screen"
+    fi
+    
+    echo "Using display: $CURRENT_DISPLAY"
+    
+    # Try to create and set display mode with error handling
+    if xrandr --newmode "1024x768" 63.50 1024 1072 1176 1328 768 771 775 798 -hsync +vsync 2>/dev/null; then
+        echo "Created display mode 1024x768"
+        if xrandr --addmode "$CURRENT_DISPLAY" "1024x768" 2>/dev/null; then
+            echo "Added mode to display"
+            if xrandr --output "$CURRENT_DISPLAY" --mode "1024x768" --dpi 96 2>/dev/null; then
+                echo "Set display mode successfully"
+            else
+                echo "Warning: Could not set display mode, using default"
+            fi
+        else
+            echo "Warning: Could not add mode to display, using default"
+        fi
+    else
+        echo "Warning: Could not create display mode, using default resolution"
+    fi
+fi
 
 # set xresources
+echo "Setting X resources..."
 if [ -f "${HOME}/.Xresources" ]; then
-  xrdb "${HOME}/.Xresources"
+  xrdb "${HOME}/.Xresources" 2>/dev/null || echo "Warning: Could not load .Xresources"
 else
   echo "Xcursor.theme: breeze" > "${HOME}/.Xresources"
-  xrdb "${HOME}/.Xresources"
+  xrdb "${HOME}/.Xresources" 2>/dev/null || echo "Warning: Could not load .Xresources"
 fi
-chown abc:abc "${HOME}/.Xresources"
+chown abc:abc "${HOME}/.Xresources" 2>/dev/null || true
 
-# run
+# run desktop environment
+echo "Starting desktop environment..."
 cd $HOME
 
 # Check if webtop is installed and use appropriate desktop environment
 if [ -f "/etc/selkies/webtop-installed" ]; then
   # Use XFCE desktop environment (webtop)
+  echo "Starting XFCE desktop environment..."
   exec /bin/bash /defaults/startwm.sh
 else
   # Use OpenBox desktop environment (default selkies)
+  echo "Starting OpenBox desktop environment..."
   exec /usr/bin/openbox-session
 fi 

@@ -13,7 +13,6 @@ Environment=LC_ALL=
 Environment=NO_DECOR=
 Environment=NO_FULL=
 Environment=NO_GAMEPAD=
-ExecStartPre=/bin/bash /etc/selkies/init-video.sh
 ExecStartPre=/bin/bash -c 'until xdpyinfo -display :1 >/dev/null 2>&1; do echo "Waiting for X server..."; sleep 1; done'
 ExecStart=/bin/bash /etc/selkies/svc-de.sh
 WorkingDirectory=/config
