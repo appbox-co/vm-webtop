@@ -382,6 +382,7 @@ install_main_packages() {
         libnginx-mod-http-fancyindex \
         nginx-extras \
         openbox \
+        pavucontrol \
         pulseaudio \
         pulseaudio-utils \
         stterm \
