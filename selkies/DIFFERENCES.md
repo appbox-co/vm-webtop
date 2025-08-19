@@ -21,7 +21,7 @@ This document outlines the differences between the original `docker-baseimage-se
 | `init-video` | ExecStartPre in `selkies-desktop.service` | Video device permissions |
 | `svc-xorg` | `xvfb.service` | X server (Xvfb) |
 | `svc-pulseaudio` | `selkies-pulseaudio.service` | Audio server |
-| `svc-docker` | `selkies-docker.service` | Docker daemon |
+| `svc-docker` | N/A (uses system docker.service) | Docker daemon |
 | `svc-nginx` | `selkies-nginx.service` | Web server |
 | `svc-selkies` | `selkies.service` | Main selkies process |
 | `svc-de` | `selkies-desktop.service` | Desktop environment |
@@ -72,8 +72,6 @@ This document outlines the differences between the original `docker-baseimage-se
   xvfb.service
   ↓
   selkies-pulseaudio.service
-  ↓
-  selkies-docker.service
   ↓
   selkies-nginx.service
   ↓

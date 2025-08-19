@@ -270,17 +270,13 @@ System Boot
     ↓
 xvfb.service (from selkies component)
     ↓
-selkies-docker.service
-    ↓
 selkies-pulseaudio.service
-    ↓
-selkies-xorg.service
     ↓
 selkies-nginx.service
     ↓
 selkies.service
     ↓
-webtop-de.service
+selkies-desktop.service
     ↓
 Ready for Web Access (Port 443)
 ```
@@ -298,7 +294,7 @@ Ready for Web Access (Port 443)
 | `svc-selkies` | `selkies.service` | Main Selkies process |
 | `svc-nginx` | `selkies-nginx.service` | Web server process |
 | `svc-pulseaudio` | `selkies-pulseaudio.service` | Audio server process |
-| `svc-docker` | `selkies-docker.service` | Docker daemon |
+| `svc-docker` | N/A (uses system docker.service) | Docker daemon |
 | `svc-de` | `webtop-de.service` | Desktop environment |
 
 ### Systemd Service Template

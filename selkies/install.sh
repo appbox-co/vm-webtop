@@ -710,7 +710,7 @@ create_systemd_services() {
     info "Verifying systemd services in rootfs..."
     
     # Verify all systemd service files exist in rootfs
-    local services=("selkies-setup.service" "xvfb.service" "selkies-pulseaudio.service" "selkies-docker.service" "selkies-nginx.service" "selkies.service" "selkies-desktop.service")
+    local services=("selkies-setup.service" "xvfb.service" "selkies-pulseaudio.service" "selkies-nginx.service" "selkies.service" "selkies-desktop.service")
     
     for service in "${services[@]}"; do
         if [[ ! -f "$SCRIPT_DIR/rootfs/etc/systemd/system/$service" ]]; then
@@ -836,13 +836,18 @@ main() {
     cp "$SCRIPT_DIR/rootfs/defaults"/* /defaults/
     chown -R abc:abc /defaults
     
+    # Disable system nginx service to prevent port conflicts with selkies-nginx
+    info "Disabling system nginx service to prevent conflicts..."
+    systemctl stop nginx 2>/dev/null || true
+    systemctl disable nginx 2>/dev/null || true
+    
     # Enable systemd services (only top-level services with WantedBy directives)
     info "Enabling systemd services..."
     enable_service "selkies-setup"
     enable_service "selkies"
     enable_service "selkies-desktop"
     
-    # Note: xvfb, selkies-pulseaudio, selkies-docker, and selkies-nginx services
+    # Note: xvfb, selkies-pulseaudio, and selkies-nginx services
     # are started automatically by dependency chains and should not be enabled directly
     # This prevents circular dependencies that caused services to be skipped at boot
     
@@ -862,8 +867,8 @@ main() {
     info "Dependency services (started automatically):"
     info "  - xvfb.service (Virtual display server)"
     info "  - selkies-pulseaudio.service (Audio server)"
-    info "  - selkies-docker.service (Docker daemon)"
     info "  - selkies-nginx.service (Web server)"
+    info "  - docker.service (System Docker daemon)"
     info ""
     info "To start all services: systemctl start selkies-desktop"
     info "To check status: systemctl status selkies"

@@ -1,7 +1,7 @@
 [Unit]
 Description=Nginx Web Server for Selkies
-After=selkies-docker.service
-Requires=selkies-docker.service
+After=selkies-pulseaudio.service
+Requires=selkies-pulseaudio.service
 
 [Service]
 Type=simple
