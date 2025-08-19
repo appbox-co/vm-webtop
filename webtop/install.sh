@@ -136,7 +136,7 @@ apply_xfce_tweaks() {
     fi
     
     if [[ -f /usr/bin/chromium ]]; then
-        mv /usr/bin/chromium /usr/bin/chromium-browser
+        mv /usr/bin/chromium /usr/bin/chromium-original
     fi
     
     # Remove xscreensaver autostart
