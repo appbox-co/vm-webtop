@@ -132,7 +132,7 @@ apply_xfce_tweaks() {
     fi
     
     if [[ -f /usr/bin/thunar ]]; then
-        mv /usr/bin/thunar /usr/bin/thunar-real
+        mv /usr/bin/thunar /usr/bin/thunar-original
     fi
     
     if [[ -f /usr/bin/chromium ]]; then
