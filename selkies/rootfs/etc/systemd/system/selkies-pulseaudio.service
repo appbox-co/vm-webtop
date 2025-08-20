@@ -8,11 +8,12 @@ Type=simple
 User=abc
 Group=abc
 Environment=PULSE_RUNTIME_PATH=/defaults
-ExecStart=/usr/bin/pulseaudio --log-level=0 --log-target=stderr --exit-idle-time=-1
+Environment=HOME=/config
+ExecStart=/usr/local/bin/start-selkies-pulseaudio.sh
 Restart=always
 RestartSec=5
 StandardOutput=null
 StandardError=null
 
 [Install]
-# No WantedBy - this service is started by dependency chain 
+# No WantedBy - this service is started by dependency chain
