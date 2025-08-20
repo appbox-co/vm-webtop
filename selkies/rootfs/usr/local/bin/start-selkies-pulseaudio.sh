@@ -19,7 +19,6 @@ echo "$(date): Starting fresh PulseAudio daemon..."
 cd /config
 PULSE_RUNTIME_PATH=/defaults /usr/bin/pulseaudio --log-level=4 --log-target=stderr --exit-idle-time=-1 &
 PULSE_PID=$!
-echo $PULSE_PID > /defaults/pid
 echo "$(date): PulseAudio started with PID: $PULSE_PID"
 
 # Wait for PulseAudio to be ready
