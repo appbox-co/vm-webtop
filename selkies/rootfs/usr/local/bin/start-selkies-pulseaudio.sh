@@ -66,7 +66,9 @@ fi
 # Set defaults
 echo "$(date): Setting defaults..."
 pactl set-default-sink output || true
-pactl set-default-source output.monitor || true
+pactl set-default-source VirtualMic || true
+
+echo "$(date): Setting VirtualMic as default microphone input for browser..."
 
 echo "$(date): Audio routing setup:"
 echo "$(date): - Desktop audio output -> 'output' sink -> 'output.monitor' source -> WebRTC to browser"
