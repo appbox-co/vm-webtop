@@ -1,0 +1,16 @@
+[Unit]
+Description=Selkies Microphone Patch Service
+After=selkies-setup.service
+Before=selkies.service
+Requires=selkies-setup.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/bin/bash /usr/local/bin/patch-selkies-microphone.sh
+RemainAfterExit=yes
+TimeoutStartSec=30
+
+[Install]
+WantedBy=multi-user.target

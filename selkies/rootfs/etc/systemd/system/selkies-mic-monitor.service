@@ -1,0 +1,17 @@
+[Unit]
+Description=Selkies Microphone Monitor
+After=selkies-pulseaudio.service
+Requires=selkies-pulseaudio.service
+
+[Service]
+Type=simple
+User=abc
+Group=abc
+Environment=PULSE_SERVER=unix:/defaults/native
+ExecStart=/bin/bash /usr/local/bin/monitor-selkies-mic.sh
+Restart=always
+RestartSec=3
+TimeoutStartSec=30
+
+[Install]
+WantedBy=multi-user.target
