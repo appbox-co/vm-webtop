@@ -59,7 +59,7 @@ fi
 echo "$(date): Creating virtual microphone source for WebRTC..."
 if ! pactl list short sources | grep -q "VirtualMic"; then
     echo "$(date): Creating VirtualMic source..."
-    pactl load-module module-virtual-source source_name="VirtualMic" master="microphone.monitor" source_properties=device.description="Virtual\ Microphone"
+    pactl load-module module-virtual-source source_name="VirtualMic" master="microphone.monitor" source_properties="device.description='Virtual Microphone'"
     echo "$(date): VirtualMic source created"
 else
     echo "$(date): VirtualMic source already exists, skipping creation"
