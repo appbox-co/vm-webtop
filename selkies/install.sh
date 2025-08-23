@@ -845,7 +845,6 @@ main() {
     # Enable systemd services (only top-level services with WantedBy directives)
     info "Enabling systemd services..."
     enable_service "selkies-setup"
-    enable_service "selkies-mic-patch"
     enable_service "selkies"
     enable_service "selkies-desktop"
     
@@ -863,7 +862,6 @@ main() {
     info "✅ Selkies installation completed successfully!"
     info "Services enabled:"
     info "  - selkies-setup.service (Device and permission setup)"
-    info "  - selkies-mic-patch.service (Microphone routing patch)"
     info "  - selkies.service (Main selkies process)"
     info "  - selkies-desktop.service (Desktop environment)"
     info ""

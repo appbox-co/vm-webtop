@@ -45,33 +45,34 @@ else
     echo "$(date): Output sink already exists, skipping creation"
 fi
 
-# Create input sink for microphone forwarding
+# Check if input sink already exists before creating (for microphone from browser)
 if ! pactl list short sinks | grep -q "^[0-9]*[[:space:]]*input[[:space:]]"; then
-    echo "$(date): Creating input sink for Selkies microphone forwarding..."
+    echo "$(date): Creating input sink for browser microphone..."
     pactl load-module module-null-sink sink_name="input" sink_properties=device.description="input"
 else
     echo "$(date): Input sink already exists, skipping creation"
 fi
 
-# Create virtual microphone source that monitors input.monitor for desktop apps
-echo "$(date): Creating virtual microphone source for desktop apps..."
-if ! pactl list short sources | grep -q "SelkiesVirtualMic"; then
-    echo "$(date): Creating SelkiesVirtualMic to monitor input.monitor..."
-    pactl load-module module-virtual-source source_name="SelkiesVirtualMic" master="input.monitor"
+# Create virtual microphone source for WebRTC input (monitor the input sink where browser sends mic audio)
+echo "$(date): Creating virtual microphone source for WebRTC..."
+if ! pactl list short sources | grep -q "VirtualMic"; then
+    echo "$(date): Creating VirtualMic source to monitor input sink..."
+    pactl load-module module-virtual-source source_name=VirtualMic master=input.monitor
+    echo "$(date): VirtualMic source created - will capture browser microphone audio from input sink"
 else
-    echo "$(date): SelkiesVirtualMic already exists, checking master device..."
-    # Note: Selkies may recreate this later, but we set the correct one first
+    echo "$(date): VirtualMic source already exists, skipping creation"
 fi
 
 # Set defaults
 echo "$(date): Setting defaults..."
 pactl set-default-sink output || true
-# Keep output.monitor as default source so pcmflux stays on desktop audio
-pactl set-default-source output.monitor || true
+pactl set-default-source VirtualMic || true
+
+echo "$(date): Setting VirtualMic as default microphone input for browser..."
 
 echo "$(date): Audio routing setup:"
-echo "$(date): - Desktop audio output -> 'output' sink -> 'output.monitor' source -> Selkies (SELKIES_AUDIO_DEVICE) -> WebRTC to browser"
-echo "$(date): - Browser microphone -> WebRTC -> Selkies pasimple -> 'input' sink -> 'input.monitor' -> 'SelkiesVirtualMic' -> desktop apps"
+echo "$(date): - Desktop audio output -> 'output' sink -> 'output.monitor' source -> WebRTC to browser"
+echo "$(date): - Browser microphone -> WebRTC -> 'input' sink -> 'input.monitor' source -> 'VirtualMic' -> desktop apps"
 
 echo "$(date): PulseAudio setup completed successfully"
 
