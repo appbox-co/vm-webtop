@@ -12,7 +12,7 @@ find_selkies_websocket() {
     local websocket_file=""
     
     # Try to find selkies_gstreamer module location
-    echo "$(date): Attempting to locate selkies_gstreamer module..."
+    echo "$(date): Attempting to locate selkies_gstreamer module..." >&2
     
     # Method 1: Use Python to find the module
     if command -v python3 >/dev/null 2>&1; then
@@ -28,7 +28,7 @@ except ImportError:
             local module_dir=$(dirname "$module_path")
             websocket_file="$module_dir/websocket.py"
             if [ -f "$websocket_file" ]; then
-                echo "$(date): Found websocket.py via Python import: $websocket_file"
+                echo "$(date): Found websocket.py via Python import: $websocket_file" >&2
                 echo "$websocket_file"
                 return 0
             fi
@@ -36,7 +36,7 @@ except ImportError:
     fi
     
     # Method 2: Search common Python installation paths
-    echo "$(date): Searching common Python paths..."
+    echo "$(date): Searching common Python paths..." >&2
     local python_version=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "3.12")
     
     local search_paths=(
@@ -48,22 +48,22 @@ except ImportError:
     
     for path in "${search_paths[@]}"; do
         if [ -f "$path/websocket.py" ]; then
-            echo "$(date): Found websocket.py at: $path/websocket.py"
+            echo "$(date): Found websocket.py at: $path/websocket.py" >&2
             echo "$path/websocket.py"
             return 0
         fi
     done
     
     # Method 3: Find using locate/find
-    echo "$(date): Using find command to search filesystem..."
+    echo "$(date): Using find command to search filesystem..." >&2
     local found_file=$(find /usr -name "websocket.py" -path "*/selkies_gstreamer/*" 2>/dev/null | head -1)
     if [ -n "$found_file" ]; then
-        echo "$(date): Found websocket.py via find: $found_file"
+        echo "$(date): Found websocket.py via find: $found_file" >&2
         echo "$found_file"
         return 0
     fi
     
-    echo "$(date): Could not locate selkies_gstreamer/websocket.py"
+    echo "$(date): Could not locate selkies_gstreamer/websocket.py" >&2
     return 1
 }
 
