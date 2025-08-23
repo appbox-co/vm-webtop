@@ -45,14 +45,33 @@ else
     echo "$(date): Output sink already exists, skipping creation"
 fi
 
-# Set defaults (let Selkies handle the rest)
+# Create input sink for microphone forwarding
+if ! pactl list short sinks | grep -q "^[0-9]*[[:space:]]*input[[:space:]]"; then
+    echo "$(date): Creating input sink for Selkies microphone forwarding..."
+    pactl load-module module-null-sink sink_name="input" sink_properties=device.description="input"
+else
+    echo "$(date): Input sink already exists, skipping creation"
+fi
+
+# Create virtual microphone source that monitors input.monitor for desktop apps
+echo "$(date): Creating virtual microphone source for desktop apps..."
+if ! pactl list short sources | grep -q "SelkiesVirtualMic"; then
+    echo "$(date): Creating SelkiesVirtualMic to monitor input.monitor..."
+    pactl load-module module-virtual-source source_name="SelkiesVirtualMic" master="input.monitor"
+else
+    echo "$(date): SelkiesVirtualMic already exists, checking master device..."
+    # Note: Selkies may recreate this later, but we set the correct one first
+fi
+
+# Set defaults
 echo "$(date): Setting defaults..."
 pactl set-default-sink output || true
-pactl set-default-source output.monitor || true
+# Set default source to SelkiesVirtualMic so desktop apps get browser microphone
+pactl set-default-source SelkiesVirtualMic || true
 
-echo "$(date): Audio routing setup (Selkies will handle microphone forwarding):"
-echo "$(date): - Desktop audio output -> 'output' sink -> 'output.monitor' source -> WebRTC to browser"
-echo "$(date): - Browser microphone -> WebRTC -> Selkies microphone forwarding -> desktop apps"
+echo "$(date): Audio routing setup:"
+echo "$(date): - Desktop audio output -> 'output' sink -> 'output.monitor' source -> Selkies (SELKIES_AUDIO_DEVICE) -> WebRTC to browser"
+echo "$(date): - Browser microphone -> WebRTC -> Selkies pasimple -> 'input' sink -> 'input.monitor' -> 'SelkiesVirtualMic' -> desktop apps"
 
 echo "$(date): PulseAudio setup completed successfully"
 
