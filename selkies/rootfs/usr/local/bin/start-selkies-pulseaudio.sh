@@ -45,22 +45,20 @@ else
     echo "$(date): Output sink already exists, skipping creation"
 fi
 
-# Create microphone input source (virtual microphone for WebRTC)
-echo "$(date): Creating microphone input source..."
-if ! pactl list short sources | grep -q "microphone"; then
-    echo "$(date): Creating microphone source..."
-    pactl load-module module-null-sink sink_name="microphone" sink_properties=device.description="Microphone"
-    echo "$(date): Microphone sink created, monitor source will be available as microphone.monitor"
+# Check if input sink already exists before creating (for microphone from browser)
+if ! pactl list short sinks | grep -q "^[0-9]*[[:space:]]*input[[:space:]]"; then
+    echo "$(date): Creating input sink for browser microphone..."
+    pactl load-module module-null-sink sink_name="input" sink_properties=device.description="input"
 else
-    echo "$(date): Microphone source already exists, skipping creation"
+    echo "$(date): Input sink already exists, skipping creation"
 fi
 
-# Create virtual microphone source for WebRTC input
-echo "$(date): Creating virtual microphone source for WebRTC..."
+# Create virtual microphone source for WebRTC input (monitor the input sink where browser sends mic audio)
+echo "$(date): Creating virtual microphone source for WebRTC...")
 if ! pactl list short sources | grep -q "VirtualMic"; then
-    echo "$(date): Creating VirtualMic source..."
-    pactl load-module module-virtual-source source_name=VirtualMic master=microphone.monitor
-    echo "$(date): VirtualMic source created"
+    echo "$(date): Creating VirtualMic source to monitor input sink..."
+    pactl load-module module-virtual-source source_name=VirtualMic master=input.monitor
+    echo "$(date): VirtualMic source created - will capture browser microphone audio from input sink"
 else
     echo "$(date): VirtualMic source already exists, skipping creation"
 fi
@@ -72,7 +70,7 @@ pactl set-default-source output.monitor || true
 
 echo "$(date): Audio routing setup:"
 echo "$(date): - Desktop audio output -> 'output' sink -> 'output.monitor' source -> WebRTC to browser"
-echo "$(date): - Browser microphone -> WebRTC -> 'microphone' sink -> 'microphone.monitor' source -> 'VirtualMic' -> desktop apps"
+echo "$(date): - Browser microphone -> WebRTC -> 'input' sink -> 'input.monitor' source -> 'VirtualMic' -> desktop apps"
 
 echo "$(date): PulseAudio setup completed successfully"
 
