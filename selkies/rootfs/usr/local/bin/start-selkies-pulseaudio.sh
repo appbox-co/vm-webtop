@@ -66,8 +66,8 @@ fi
 # Set defaults
 echo "$(date): Setting defaults..."
 pactl set-default-sink output || true
-# Set default source to SelkiesVirtualMic so desktop apps get browser microphone
-pactl set-default-source SelkiesVirtualMic || true
+# Keep output.monitor as default source so pcmflux stays on desktop audio
+pactl set-default-source output.monitor || true
 
 echo "$(date): Audio routing setup:"
 echo "$(date): - Desktop audio output -> 'output' sink -> 'output.monitor' source -> Selkies (SELKIES_AUDIO_DEVICE) -> WebRTC to browser"
