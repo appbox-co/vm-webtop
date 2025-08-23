@@ -54,7 +54,7 @@ else
 fi
 
 # Create virtual microphone source for WebRTC input (monitor the input sink where browser sends mic audio)
-echo "$(date): Creating virtual microphone source for WebRTC...")
+echo "$(date): Creating virtual microphone source for WebRTC..."
 if ! pactl list short sources | grep -q "VirtualMic"; then
     echo "$(date): Creating VirtualMic source to monitor input sink..."
     pactl load-module module-virtual-source source_name=VirtualMic master=input.monitor
