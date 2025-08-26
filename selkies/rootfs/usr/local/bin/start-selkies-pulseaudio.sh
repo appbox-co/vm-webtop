@@ -63,18 +63,56 @@ else
     echo "$(date): VirtualMic source already exists, skipping creation"
 fi
 
-# Set defaults
+# Set defaults (must run as abc user to affect the correct PulseAudio instance)
 echo "$(date): Setting defaults..."
-pactl set-default-sink output || true
-pactl set-default-source VirtualMic || true
+su - abc -c 'export PULSE_SERVER=unix:/defaults/native; pactl set-default-sink output' || true
+su - abc -c 'export PULSE_SERVER=unix:/defaults/native; pactl set-default-source VirtualMic' || true
 
-echo "$(date): Setting VirtualMic as default microphone input for browser..."
+echo "$(date): VirtualMic set as default microphone input for browser"
 
 echo "$(date): Audio routing setup:"
 echo "$(date): - Desktop audio output -> 'output' sink -> 'output.monitor' source -> WebRTC to browser"
 echo "$(date): - Browser microphone -> WebRTC -> 'input' sink -> 'input.monitor' source -> 'VirtualMic' -> desktop apps"
 
 echo "$(date): PulseAudio setup completed successfully"
+
+# Start background monitoring to ensure VirtualMic stays as default source
+echo "$(date): Starting background task to monitor and maintain VirtualMic as default..."
+(
+    sleep 15  # Wait for Selkies to fully start
+    while true; do
+        # Check if Selkies is running and PulseAudio is responsive
+        if pgrep -f "selkies.*audio_device_name" >/dev/null 2>&1; then
+            # Check current default source
+            CURRENT_DEFAULT=$(su - abc -c 'export PULSE_SERVER=unix:/defaults/native; pactl info 2>/dev/null | grep "Default Source"' | awk '{print $3}' 2>/dev/null || echo "")
+            
+            if [ -n "$CURRENT_DEFAULT" ] && [ "$CURRENT_DEFAULT" != "VirtualMic" ]; then
+                echo "$(date): Default source is '$CURRENT_DEFAULT', should be 'VirtualMic'. Fixing..."
+                
+                # Ensure our VirtualMic source exists
+                if su - abc -c 'export PULSE_SERVER=unix:/defaults/native; pactl list sources short' | grep -q "VirtualMic"; then
+                    # Set VirtualMic as default
+                    if su - abc -c 'export PULSE_SERVER=unix:/defaults/native; pactl set-default-source VirtualMic' 2>/dev/null; then
+                        echo "$(date): ✅ VirtualMic restored as default source"
+                    else
+                        echo "$(date): ⚠️ Failed to set VirtualMic as default"
+                    fi
+                else
+                    echo "$(date): ⚠️ VirtualMic source not found, recreating..."
+                    su - abc -c 'export PULSE_SERVER=unix:/defaults/native; pactl load-module module-virtual-source source_name=VirtualMic master=input.monitor' 2>/dev/null || true
+                fi
+            else
+                # VirtualMic is already default or no default found
+                if [ "$CURRENT_DEFAULT" = "VirtualMic" ]; then
+                    echo "$(date): ✅ VirtualMic is correctly set as default source"
+                fi
+            fi
+        fi
+        sleep 10  # Check every 10 seconds
+    done
+) &
+MONITOR_PID=$!
+echo "$(date): Background monitor started with PID: $MONITOR_PID"
 
 # Wait for the PulseAudio process
 echo "$(date): Waiting for PulseAudio process..."

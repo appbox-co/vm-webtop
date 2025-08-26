@@ -5,6 +5,10 @@ This document outlines the differences between the original `docker-baseimage-se
 
 ## Key Changes
 
+### Version Updates
+- **Selkies Commit**: Updated from `e1adbd8c5213fcc00b56d05337cf62d5701b2ed7` to `6cbd7f04cdf88a4cf90dbdbc398407746718e33d`
+- **Alpine Base**: Updated from `3.21` to `3.22` for frontend extraction
+
 ### 1. Init System Conversion
 - **Original**: Uses s6-overlay for service management
 - **VM Implementation**: Uses systemd services
@@ -60,8 +64,8 @@ This document outlines the differences between the original `docker-baseimage-se
 - **VM Implementation**: Sequential extraction and build process
 - **Process**:
   1. Extract custom Xvfb binary from `lscr.io/linuxserver/xvfb:ubuntunoble`
-  2. Build selkies frontend components using npm
-  3. Build selkies Python packages from source
+  2. Extract pre-built frontend from `ghcr.io/linuxserver/baseimage-alpine:3.22`
+  3. Build selkies Python packages in virtual environment
   4. Build joystick interposer and fake udev libraries
 
 ### 7. Service Dependencies
@@ -85,8 +89,9 @@ This document outlines the differences between the original `docker-baseimage-se
 - **VM Implementation**: Structured package installation with repository setup
 - **Changes**:
   - Added explicit repository setup for Docker and Node.js
-  - Maintained all 60+ package dependencies
-  - Added development dependencies management with cleanup
+  - Updated to 70+ package dependencies including new GUI libraries
+  - Added temporary development dependencies with cleanup
+  - Added packages: libatk1.0-0, libatk-bridge2.0-0, libgtk-3.0, libnss3, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-render-util0, libxkbcommon-x11-0, python3-venv, xsettingsd
 
 ### 9. Build Process
 - **Original**: Docker COPY commands for adding files
@@ -135,13 +140,14 @@ This document outlines the differences between the original `docker-baseimage-se
 ### VM Installation:
 1. Repository setup and package installation
 2. Docker image extraction for pre-built components
-3. Source code compilation and building
-4. Configuration file verification (all files pre-stored in rootfs/)
-5. systemd service verification (all services pre-created in rootfs/)
-6. File copying from rootfs/ to system root
-7. Environment configuration
-8. User and permission setup
-9. Service enablement
+3. Python virtual environment creation and selkies installation
+4. Source code compilation (joystick interposer, fake udev)
+5. Configuration file verification (all files pre-stored in rootfs/)
+6. systemd service verification (all services pre-created in rootfs/)
+7. File copying from rootfs/ to system root
+8. Environment configuration
+9. User and permission setup
+10. Service enablement
 
 ## Compatibility Considerations
 
@@ -159,6 +165,9 @@ This document outlines the differences between the original `docker-baseimage-se
 - Proper filesystem hierarchy usage
 - VM-appropriate file permissions
 - Pre-organized configuration files in rootfs/ structure (improved maintainability)
+- Python virtual environment for selkies installation
+- Removal of cryptography dependency from selkies build
+- Updated OpenBox configuration (single desktop)
 
 ## Testing and Validation
 

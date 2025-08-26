@@ -238,24 +238,10 @@ install_dev_dependencies() {
     
     update_package_cache
     
-    # Install packages in smaller groups for better organization
-    info "Installing build tools..."
+    # Install temporary development dependencies
+    info "Installing temporary development dependencies..."
     install_packages \
-        cmake \
-        git \
-        gcc \
-        g++ \
-        make
-    
-    info "Installing development libraries..."
-    install_packages \
-        libopus-dev \
-        libpulse-dev
-    
-    info "Installing Python development tools..."
-    install_packages \
-        python3-dev \
-        python3-pip
+        python3-dev
 }
 
 # =============================================================================
@@ -322,11 +308,13 @@ install_main_packages() {
         make \
         nodejs \
         python3 \
-        python3-distutils-extra
+        python3-venv
     
     # Group 4: Basic X11 libraries
     info "Installing basic X11 libraries..."
     install_packages \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
         libev4 \
         libfontenc1 \
         libfreetype6 \
@@ -334,7 +322,9 @@ install_main_packages() {
         libgcrypt20 \
         libgirepository-1.0-1 \
         libgnutls30 \
+        libgtk-3.0 \
         libjpeg-turbo8 \
+        libnss3 \
         libnotify-bin \
         libopus0 \
         libp11-kit0 \
@@ -345,6 +335,10 @@ install_main_packages() {
         libx264-164 \
         libxau6 \
         libxcb1 \
+        libxcb-icccm4 \
+        libxcb-image0 \
+        libxcb-keysyms1 \
+        libxcb-render-util0 \
         libxcursor1 \
         libxdmcp6 \
         libxext6 \
@@ -352,6 +346,7 @@ install_main_packages() {
         libxfixes3 \
         libxfont2 \
         libxinerama1 \
+        libxkbcommon-x11-0 \
         libxshmfence1 \
         libxtst6
     
@@ -380,7 +375,7 @@ install_main_packages() {
     install_packages \
         dunst \
         libnginx-mod-http-fancyindex \
-        nginx-extras \
+        nginx \
         openbox \
         pavucontrol \
         pulseaudio \
@@ -388,7 +383,8 @@ install_main_packages() {
         stterm \
         xdg-utils \
         xdotool \
-        xfconf
+        xfconf \
+        xsettingsd
     
     # Group 8: X11 utilities and tools
     info "Installing X11 utilities and tools..."
@@ -444,7 +440,7 @@ extract_docker_images() {
     
     # Extract Selkies frontend from Alpine image
     info "Extracting pre-built Selkies frontend..."
-    pull_docker_image "ghcr.io/linuxserver/baseimage-alpine:3.21"
+    pull_docker_image "ghcr.io/linuxserver/baseimage-alpine:3.22"
     
     # This will be extracted during the frontend build process in the multi-stage build
     # For now, we'll handle this in the source build section
@@ -462,19 +458,24 @@ extract_docker_images() {
 build_selkies_from_source() {
     info "Building Selkies from source..."
     
-    # Install Python packages
-    pip3 install pixelflux pcmflux --break-system-packages
-    
     # Download and build selkies
     local temp_dir=$(mktemp -d)
     cd "$temp_dir"
     
-    curl -o selkies.tar.gz -L "https://github.com/selkies-project/selkies/archive/e1adbd8c5213fcc00b56d05337cf62d5701b2ed7.tar.gz"
+    curl -o selkies.tar.gz -L "https://github.com/selkies-project/selkies/archive/6cbd7f04cdf88a4cf90dbdbc398407746718e33d.tar.gz"
     tar xf selkies.tar.gz
     cd selkies-*
     
-    # Install main selkies package
-    pip3 install . --break-system-packages
+    # Remove cryptography dependency
+    sed -i '/cryptography/d' pyproject.toml
+    
+    # Create virtual environment and install selkies
+    python3 -m venv --system-site-packages /lsiopy
+    /lsiopy/bin/pip install .
+    /lsiopy/bin/pip install setuptools
+    
+    # Make selkies command available globally
+    ln -sf /lsiopy/bin/selkies /usr/local/bin/selkies
     
     # Build joystick interposer
     info "Building joystick interposer..."
@@ -509,6 +510,7 @@ build_selkies_from_source() {
     cp ../gst-web-core/dist/selkies-core.js dist/src/
     cp ../universal-touch-gamepad/universalTouchGamepad.js dist/src/
     cp ../gst-web-core/nginx/* dist/nginx/
+    cp -r ../gst-web-core/dist/jsdb dist/
     
     # Copy frontend to rootfs
     mkdir -p "$SCRIPT_DIR/rootfs/usr/share/selkies/www"
@@ -549,8 +551,9 @@ configure_openbox() {
     sed -i \
         -e 's/NLIMC/NLMC/g' \
         -e '/debian-menu/d' \
-        -e 's|</applications>|  <application class="*"><maximized>yes</maximized><position force="yes"><x>0</x><y>0</y></position></application>\n</applications>|' \
+        -e 's|</applications>|  <application class="*"><maximized>yes</maximized></application>\n</applications>|' \
         -e 's|</keyboard>|  <keybind key="C-S-d"><action name="ToggleDecorations"/></keybind>\n</keyboard>|' \
+        -e 's|<number>4</number>|<number>1</number>|' \
         /etc/xdg/openbox/rc.xml
     
     info "✓ OpenBox configuration completed"
@@ -778,10 +781,7 @@ cleanup_installation() {
     
     # Remove development dependencies
     apt-get purge -y --autoremove \
-        libopus-dev \
-        libpulse-dev \
-        python3-dev \
-        python3-pip || true
+        python3-dev || true
     
     # Clean package cache
     apt-get autoclean
