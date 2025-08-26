@@ -501,13 +501,15 @@ build_selkies_from_source() {
     npm install
     npm run build
     
+    # Copy selkies-core.js to selkies-dashboard src before building
+    cp dist/selkies-core.js ../selkies-dashboard/src/
+    
     cd ../selkies-dashboard
     npm install
     npm run build
     
     # Create frontend directory structure
     mkdir -p dist/src dist/nginx
-    cp ../gst-web-core/dist/selkies-core.js dist/src/
     cp ../universal-touch-gamepad/universalTouchGamepad.js dist/src/
     cp ../gst-web-core/nginx/* dist/nginx/
     cp -r ../gst-web-core/dist/jsdb dist/
