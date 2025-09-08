@@ -1,0 +1,17 @@
+[Unit]
+Description=Desktop Audio Server (PulseAudio)
+Documentation=man:pulseaudio(1)
+After=dbus.service
+
+[Service]
+Type=simple
+Environment=PULSE_RUNTIME_PATH=/defaults
+Environment=HOME=/config
+Environment=DISPLAY=:1
+ExecStart=/usr/local/bin/start-selkies-pulseaudio.sh
+Restart=always
+RestartSec=5
+TimeoutStartSec=30
+
+[Install]
+WantedBy=default.target

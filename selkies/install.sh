@@ -274,6 +274,7 @@ install_main_packages() {
         ca-certificates \
         console-data \
         dbus-x11 \
+        dbus-user-session \
         file \
         kbd \
         locales-all \
@@ -284,6 +285,7 @@ install_main_packages() {
         software-properties-common \
         ssl-cert \
         sudo \
+        systemd-container \
         tar \
         util-linux \
         zlib1g
@@ -590,6 +592,59 @@ setup_users() {
     # Add appbox to docker group
     usermod -aG docker appbox
     
+    # Enable systemd lingering for appbox user (allows user services to start at boot)
+    info "Enabling systemd lingering for appbox user..."
+    loginctl enable-linger appbox
+    
+    # Ensure user systemd directories exist
+    mkdir -p /home/appbox/.config/systemd/user
+    chown -R appbox:appbox /home/appbox/.config
+    
+    # Try to enable user services (better system integration when available)
+    info "Setting up user systemd services..."
+    export XDG_RUNTIME_DIR="/run/user/$(id -u appbox)"
+    mkdir -p "$XDG_RUNTIME_DIR"
+    chown appbox:appbox "$XDG_RUNTIME_DIR"
+    chmod 700 "$XDG_RUNTIME_DIR"
+    
+    # For desktop environments, we MUST have user systemd working
+    info "Setting up desktop session with user systemd..."
+    
+    # Enable user systemd properly for desktop environment
+    if sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user daemon-reload 2>/dev/null; then
+        info "✓ User systemd is working - enabling desktop services..."
+        sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-pulseaudio.service
+        sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies.service
+        sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-desktop.service
+    else
+        error "User systemd is required for desktop environment!"
+        info "Installing and configuring user session support..."
+        
+        # Force setup user systemd for desktop
+        systemctl enable systemd-logind
+        
+        # Create a proper user session
+        sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemd --user --daemon
+        sleep 3
+        
+        # Try again
+        if sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user daemon-reload 2>/dev/null; then
+            info "✓ User systemd now working - enabling desktop services..."
+            sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-pulseaudio.service
+            sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies.service
+            sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-desktop.service
+        else
+            error "Failed to set up user systemd - desktop environment may not work properly"
+        fi
+    fi
+    
+    # Start user systemd session if not already running
+    if ! systemctl --user --machine=appbox@ status >/dev/null 2>&1; then
+        info "Starting user systemd session for appbox..."
+        # This will be started automatically by lingering, but we can ensure it's ready
+        sudo -u appbox systemd --user --daemon 2>/dev/null || true
+    fi
+    
     info "✓ User setup completed"
 }
 
@@ -844,11 +899,13 @@ main() {
     systemctl stop nginx 2>/dev/null || true
     systemctl disable nginx 2>/dev/null || true
     
-    # Enable systemd services (only top-level services with WantedBy directives)
-    info "Enabling systemd services..."
-    enable_service "selkies-setup"
-    enable_service "selkies"
-    enable_service "selkies-desktop"
+    # Enable system infrastructure services
+    info "Enabling system infrastructure services..."
+    enable_service "selkies-setup"  # Device setup (system service)
+    enable_service "selkies-desktop"  # Main desktop service (starts user services)
+    
+    # Note: selkies, selkies-pulseaudio are user services and enabled above
+    # selkies-nginx, xvfb are dependency services started automatically
     
     # Note: xvfb, selkies-pulseaudio, and selkies-nginx services
     # are started automatically by dependency chains and should not be enabled directly
@@ -861,21 +918,42 @@ main() {
     # Cleanup
     cleanup_installation
     
-    info "✅ Selkies installation completed successfully!"
-    info "Services enabled:"
-    info "  - selkies-setup.service (Device and permission setup)"
-    info "  - selkies.service (Main selkies process)"
-    info "  - selkies-desktop.service (Desktop environment)"
+    # Verify desktop environment setup
+    info "Verifying desktop environment setup..."
+    sleep 2  # Give systemd a moment to start
+    if sudo -u appbox XDG_RUNTIME_DIR="/run/user/$(id -u appbox)" systemctl --user status >/dev/null 2>&1; then
+        info "✓ Desktop session services are ready"
+    else
+        warn "Desktop session may need manual activation after reboot"
+        info "The desktop will initialize when you start the selkies-desktop service"
+    fi
+    
+    info "✅ Selkies Desktop Environment installation completed successfully!"
     info ""
-    info "Dependency services (started automatically):"
+    info "🖥️  DESKTOP ENVIRONMENT READY"
+    info "This is a full desktop environment accessible via web browser."
+    info ""
+    info "System infrastructure services:"
+    info "  - selkies-setup.service (Device and permission setup)"
     info "  - xvfb.service (Virtual display server)"
-    info "  - selkies-pulseaudio.service (Audio server)"
     info "  - selkies-nginx.service (Web server)"
     info "  - docker.service (System Docker daemon)"
     info ""
-    info "To start all services: systemctl start selkies-desktop"
-    info "To check status: systemctl status selkies"
-    info "Web interface will be available at: https://localhost:443"
+    info "Desktop session services (user services):"
+    info "  - selkies-pulseaudio.service (Desktop audio)"
+    info "  - selkies.service (Desktop streaming)"
+    info "  - selkies-desktop.service (Desktop environment)"
+    info ""
+    info "🚀 TO START YOUR DESKTOP:"
+    info "  systemctl start selkies-desktop    # Start the desktop environment"
+    info ""
+    info "🔍 TO CHECK DESKTOP STATUS:"
+    info "  systemctl status selkies-desktop   # Check if desktop is running"
+    info "  sudo -u appbox systemctl --user status selkies  # Check desktop services"
+    info ""
+    info "🌐 ACCESS YOUR DESKTOP:"
+    info "  Open your web browser and go to: https://localhost:443"
+    info "  You'll have a full Ubuntu desktop with audio, video, and applications!"
 }
 
 # Run main installation

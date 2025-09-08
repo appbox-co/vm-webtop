@@ -1,12 +1,11 @@
 [Unit]
-Description=Selkies GStreamer Remote Desktop
-After=selkies-nginx.service selkies-setup.service
-Requires=selkies-nginx.service selkies-setup.service
+Description=Desktop Streaming Service (Selkies)
+Documentation=https://github.com/selkies-project/selkies
+After=selkies-pulseaudio.service dbus.service
+Requires=selkies-pulseaudio.service
 
 [Service]
 Type=simple
-User=appbox
-Group=appbox
 Environment=HOME=/config
 Environment=DISPLAY=:1
 Environment=GST_DEBUG=*:1
@@ -21,15 +20,15 @@ Environment=DISPLAY_CDEPTH=24
 Environment=SELKIES_INTERPOSER=/usr/lib/selkies_joystick_interposer.so
 Environment=LD_PRELOAD=/usr/lib/selkies_joystick_interposer.so:/opt/lib/libudev.so.1.0.0-fake
 Environment=PULSE_SERVER=unix:/defaults/native
-Environment=TITLE=Selkies
+Environment=TITLE=Desktop
 Environment=DEV_MODE=
 ExecStartPre=/bin/bash /etc/selkies/init-selkies-config.sh
 ExecStartPre=/bin/bash -c 'until xdpyinfo -display :1 >/dev/null 2>&1; do echo "Waiting for X server..."; sleep 1; done'
-ExecStart=/bin/bash -c 'rm -rf "${HOME}/.cache/gstreamer-1.0"; exec selkies'
+ExecStart=/bin/bash -c 'rm -rf "${HOME}/.cache/gstreamer-1.0"; exec selkies --addr="localhost" --port="8081" --enable_basic_auth="false" --enable_metrics_http="true" --metrics_http_port="9081" --mode="websockets" --audio_device_name="VirtualMic"'
 WorkingDirectory=/config
 Restart=always
 RestartSec=5
 TimeoutStartSec=60
 
 [Install]
-WantedBy=multi-user.target 
+WantedBy=default.target

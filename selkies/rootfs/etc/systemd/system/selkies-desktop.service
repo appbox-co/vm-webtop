@@ -1,7 +1,7 @@
 [Unit]
-Description=Desktop Environment for Selkies
-After=selkies.service selkies-setup.service
-Requires=selkies.service selkies-setup.service
+Description=Selkies Desktop Environment
+After=selkies-setup.service selkies-nginx.service
+Requires=selkies-setup.service selkies-nginx.service
 
 [Service]
 Type=simple
@@ -9,12 +9,17 @@ User=appbox
 Group=appbox
 Environment=HOME=/config
 Environment=DISPLAY=:1
+Environment=XDG_RUNTIME_DIR=/run/user/1000
 Environment=LC_ALL=
 Environment=NO_DECOR=
 Environment=NO_FULL=
 Environment=NO_GAMEPAD=
 ExecStartPre=/bin/bash -c 'until xdpyinfo -display :1 >/dev/null 2>&1; do echo "Waiting for X server..."; sleep 1; done'
+ExecStartPre=/bin/bash -c 'systemctl --user --machine=appbox@ start selkies-pulseaudio.service || true'
+ExecStartPre=/bin/bash -c 'systemctl --user --machine=appbox@ start selkies.service || true'
 ExecStart=/bin/bash /etc/selkies/svc-de.sh
+ExecStopPost=/bin/bash -c 'systemctl --user --machine=appbox@ stop selkies.service || true'
+ExecStopPost=/bin/bash -c 'systemctl --user --machine=appbox@ stop selkies-pulseaudio.service || true'
 WorkingDirectory=/config
 Restart=always
 RestartSec=5
