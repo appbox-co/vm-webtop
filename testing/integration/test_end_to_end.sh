@@ -181,13 +181,13 @@ test_audio_system() {
     fi
     
     # Check if audio devices are available
-    if ! sudo -u abc PULSE_RUNTIME_PATH=/defaults pactl info >/dev/null 2>&1; then
+    if ! sudo -u appbox PULSE_RUNTIME_PATH=/defaults pactl info >/dev/null 2>&1; then
         log_fail "Could not connect to PulseAudio server"
         return $FAIL
     fi
     
     # Check if audio modules are loaded
-    if ! sudo -u abc PULSE_RUNTIME_PATH=/defaults pactl list modules | grep -q "module-null-sink"; then
+    if ! sudo -u appbox PULSE_RUNTIME_PATH=/defaults pactl list modules | grep -q "module-null-sink"; then
         log_fail "Audio modules not loaded"
         return $FAIL
     fi
@@ -211,9 +211,9 @@ test_docker_integration() {
         return $FAIL
     fi
     
-    # Check if abc user can access Docker
-    if ! sudo -u abc docker info >/dev/null 2>&1; then
-        log_fail "User 'abc' cannot access Docker"
+    # Check if appbox user can access Docker
+    if ! sudo -u appbox docker info >/dev/null 2>&1; then
+        log_fail "User 'appbox' cannot access Docker"
         return $FAIL
     fi
     
@@ -272,9 +272,9 @@ test_websocket_connection() {
 test_file_system_permissions() {
     log_info "Testing file system permissions..."
     
-    # Check if abc user can write to /config
-    if ! sudo -u abc test -w /config; then
-        log_fail "User 'abc' cannot write to /config directory"
+    # Check if appbox user can write to /config
+    if ! sudo -u appbox test -w /config; then
+        log_fail "User 'appbox' cannot write to /config directory"
         return $FAIL
     fi
     
@@ -284,15 +284,15 @@ test_file_system_permissions() {
         return $FAIL
     fi
     
-    if ! sudo -u abc test -w /config/Desktop; then
-        log_fail "User 'abc' cannot write to Desktop directory"
+    if ! sudo -u appbox test -w /config/Desktop; then
+        log_fail "User 'appbox' cannot write to Desktop directory"
         return $FAIL
     fi
     
     # Test file creation
     local test_file="/config/test_file.tmp"
-    if ! sudo -u abc touch "$test_file"; then
-        log_fail "User 'abc' cannot create files in /config"
+    if ! sudo -u appbox touch "$test_file"; then
+        log_fail "User 'appbox' cannot create files in /config"
         return $FAIL
     fi
     

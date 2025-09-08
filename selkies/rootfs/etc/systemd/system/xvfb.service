@@ -3,8 +3,8 @@ Description=Xvfb Virtual Display Server
 
 [Service]
 Type=simple
-User=abc
-Group=abc
+User=appbox
+Group=appbox
 Environment=DISPLAY=:1
 Environment=DISPLAY_CDEPTH=24
 Environment=DISPLAY_DPI=96

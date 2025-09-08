@@ -5,7 +5,7 @@ NGINX_CONFIG=/etc/nginx/sites-available/default
 
 # user passed env vars
 CPORT="${CUSTOM_PORT:-443}"
-CUSER="${CUSTOM_USER:-abc}"
+CUSER="${CUSTOM_USER:-appbox}"
 SFOLDER="${SUBFOLDER:-/}"
 
 # Find SSL key file in /etc/ssl/appbox/
@@ -38,7 +38,7 @@ sed -i "s|SSL_KEY_FILE|$SSL_KEY_FILE|g" ${NGINX_CONFIG}
 
 # nginx-extras includes the realip module by default
 mkdir -p $HOME/Desktop
-chown abc:abc $HOME/Desktop
+chown appbox:appbox $HOME/Desktop
 
 if [ ! -z ${DISABLE_IPV6+x} ]; then
   sed -i '/listen \[::\]/d' ${NGINX_CONFIG}

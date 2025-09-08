@@ -122,7 +122,7 @@ Create a script-based installation system to recreate the functionality of the L
 - **Impact**: Service dependencies and startup order management
 
 ### User Management
-- **Docker**: LinuxServer.io user model (abc user, PUID/PGID)
+- **Docker**: LinuxServer.io user model (appbox user, PUID/PGID)
 - **VM**: Standard Linux user model
 - **Impact**: User creation and permission management
 

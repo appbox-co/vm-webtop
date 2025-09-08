@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Desktop environment startup script
-# This script runs as user abc and starts the desktop environment
+# This script runs as user appbox and starts the desktop environment
 
 # wait for X server to be ready
 echo "Waiting for X server to be ready..."
@@ -105,7 +105,7 @@ else
   echo "Xcursor.theme: breeze" > "${HOME}/.Xresources"
   xrdb "${HOME}/.Xresources" 2>/dev/null || echo "Warning: Could not load .Xresources"
 fi
-chown abc:abc "${HOME}/.Xresources" 2>/dev/null || true
+chown appbox:appbox "${HOME}/.Xresources" 2>/dev/null || true
 
 # run desktop environment
 echo "Starting desktop environment..."

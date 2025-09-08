@@ -181,17 +181,17 @@ test_selkies_configuration() {
 test_selkies_user() {
     log_info "Testing selkies user configuration..."
     
-    # Check if abc user exists
-    if ! id -u abc >/dev/null 2>&1; then
-        log_fail "User 'abc' does not exist"
+    # Check if appbox user exists
+    if ! id -u appbox >/dev/null 2>&1; then
+        log_fail "User 'appbox' does not exist"
         return $FAIL
     fi
     
-    # Check if abc user is in required groups
+    # Check if appbox user is in required groups
     local groups=("docker" "audio" "video" "pulse" "pulse-access")
     for group in "${groups[@]}"; do
-        if ! id -nG abc | grep -q "$group"; then
-            log_fail "User 'abc' is not in group: $group"
+        if ! id -nG appbox | grep -q "$group"; then
+            log_fail "User 'appbox' is not in group: $group"
             return $FAIL
         fi
     done
@@ -203,12 +203,12 @@ test_selkies_user() {
     fi
     
     local owner=$(stat -c "%U" /config)
-    if [[ "$owner" != "abc" ]]; then
-        log_fail "/config directory is not owned by abc user (owner: $owner)"
+    if [[ "$owner" != "appbox" ]]; then
+        log_fail "/config directory is not owned by appbox user (owner: $owner)"
         return $FAIL
     fi
     
-    log_pass "User 'abc' is properly configured"
+    log_pass "User 'appbox' is properly configured"
     return $PASS
 }
 

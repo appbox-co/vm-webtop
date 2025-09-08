@@ -568,18 +568,18 @@ configure_openbox() {
 setup_users() {
     info "Setting up users and permissions..."
     
-    # Configure sudo for abc user
+    # Configure sudo for appbox user
     sed -e 's/%sudo	ALL=(ALL:ALL) ALL/%sudo ALL=(ALL:ALL) NOPASSWD: ALL/g' -i /etc/sudoers
     
-    # Create abc user if it doesn't exist
-    if ! id abc &>/dev/null; then
-        useradd -m -s /bin/bash abc
+    # Create appbox user if it doesn't exist
+    if ! id appbox &>/dev/null; then
+        useradd -m -s /bin/bash appbox
     fi
     
     # Set password and groups
-    echo "abc:abc" | chpasswd
-    usermod -s /bin/bash abc
-    usermod -aG sudo abc
+    echo "appbox:appbox" | chpasswd
+    usermod -s /bin/bash appbox
+    usermod -aG sudo appbox
     
     # Docker-in-Docker support
     useradd -U dockremap || true
@@ -587,8 +587,8 @@ setup_users() {
     echo 'dockremap:165536:65536' >> /etc/subuid
     echo 'dockremap:165536:65536' >> /etc/subgid
     
-    # Add abc to docker group
-    usermod -aG docker abc
+    # Add appbox to docker group
+    usermod -aG docker appbox
     
     info "✓ User setup completed"
 }
@@ -831,13 +831,13 @@ main() {
     
     # Create /config directory and set permissions
     mkdir -p /config
-    chown abc:abc /config
+    chown appbox:appbox /config
     chmod 755 /config
     
     # Create /defaults directory and copy files
     mkdir -p /defaults
     cp "$SCRIPT_DIR/rootfs/defaults"/* /defaults/
-    chown -R abc:abc /defaults
+    chown -R appbox:appbox /defaults
     
     # Disable system nginx service to prevent port conflicts with selkies-nginx
     info "Disabling system nginx service to prevent conflicts..."

@@ -150,7 +150,7 @@ sudo ./install.sh [--component <component>] [--dry-run] [--verbose] [--help]
    - Build joystick interposer library from source (gcc compilation)
    - Build fake udev library from source (make)
 5. Configure OpenBox window manager settings
-6. Set up `abc` user with sudo permissions and bash shell
+6. Set up `appbox` user with sudo permissions and bash shell
 7. Install and configure proot-apps from GitHub releases
 8. Configure Docker-in-Docker support (`dockremap` user, subuid/subgid)
 9. Install and configure locales for internationalization

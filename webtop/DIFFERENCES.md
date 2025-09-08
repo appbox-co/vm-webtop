@@ -158,7 +158,7 @@ webtop/
 ### 15. Security Considerations
 - **Original**: Container-based security model
 - **VM Implementation**: VM-based security with proper file permissions
-- **Permissions**: All files properly owned by abc:abc user
+- **Permissions**: All files properly owned by appbox:appbox user
 - **Executable**: Scripts properly marked as executable
 
 ## Environment Variables

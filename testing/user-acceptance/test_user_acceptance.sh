@@ -101,7 +101,7 @@ test_browser_functionality() {
     fi
     
     # Test browser can be launched (check if it starts without crashing)
-    timeout $APPLICATION_START_TIMEOUT sudo -u abc DISPLAY=:1 /usr/bin/chromium --version >/dev/null 2>&1
+    timeout $APPLICATION_START_TIMEOUT sudo -u appbox DISPLAY=:1 /usr/bin/chromium --version >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         log_fail "Browser cannot be launched or crashes immediately"
         return $FAIL
@@ -121,7 +121,7 @@ test_file_manager_functionality() {
     fi
     
     # Test file manager can be launched
-    timeout $APPLICATION_START_TIMEOUT sudo -u abc DISPLAY=:1 thunar --version >/dev/null 2>&1
+    timeout $APPLICATION_START_TIMEOUT sudo -u appbox DISPLAY=:1 thunar --version >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         log_fail "File manager cannot be launched or crashes immediately"
         return $FAIL
@@ -141,7 +141,7 @@ test_terminal_functionality() {
     fi
     
     # Test terminal can be launched
-    timeout $APPLICATION_START_TIMEOUT sudo -u abc DISPLAY=:1 xfce4-terminal --version >/dev/null 2>&1
+    timeout $APPLICATION_START_TIMEOUT sudo -u appbox DISPLAY=:1 xfce4-terminal --version >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         log_fail "Terminal cannot be launched or crashes immediately"
         return $FAIL
@@ -161,7 +161,7 @@ test_text_editor_functionality() {
     fi
     
     # Test text editor can be launched
-    timeout $APPLICATION_START_TIMEOUT sudo -u abc DISPLAY=:1 mousepad --version >/dev/null 2>&1
+    timeout $APPLICATION_START_TIMEOUT sudo -u appbox DISPLAY=:1 mousepad --version >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         log_fail "Text editor cannot be launched or crashes immediately"
         return $FAIL
@@ -181,13 +181,13 @@ test_audio_functionality() {
     fi
     
     # Test audio server connectivity
-    if ! sudo -u abc PULSE_RUNTIME_PATH=/defaults pactl info >/dev/null 2>&1; then
+    if ! sudo -u appbox PULSE_RUNTIME_PATH=/defaults pactl info >/dev/null 2>&1; then
         log_fail "Cannot connect to audio server"
         return $FAIL
     fi
     
     # Check if audio devices are available
-    local audio_devices=$(sudo -u abc PULSE_RUNTIME_PATH=/defaults pactl list sinks | grep -c "Sink #")
+    local audio_devices=$(sudo -u appbox PULSE_RUNTIME_PATH=/defaults pactl list sinks | grep -c "Sink #")
     if [[ $audio_devices -lt 1 ]]; then
         log_fail "No audio devices available"
         return $FAIL
@@ -205,13 +205,13 @@ test_file_operations() {
     local test_content="This is a test file for user acceptance testing"
     
     # Test file creation
-    if ! sudo -u abc bash -c "echo '$test_content' > '$test_file'"; then
+    if ! sudo -u appbox bash -c "echo '$test_content' > '$test_file'"; then
         log_fail "Cannot create files in user directory"
         return $FAIL
     fi
     
     # Test file reading
-    local file_content=$(sudo -u abc cat "$test_file")
+    local file_content=$(sudo -u appbox cat "$test_file")
     if [[ "$file_content" != "$test_content" ]]; then
         log_fail "Cannot read files from user directory"
         return $FAIL
@@ -219,13 +219,13 @@ test_file_operations() {
     
     # Test file modification
     local modified_content="Modified content"
-    if ! sudo -u abc bash -c "echo '$modified_content' >> '$test_file'"; then
+    if ! sudo -u appbox bash -c "echo '$modified_content' >> '$test_file'"; then
         log_fail "Cannot modify files in user directory"
         return $FAIL
     fi
     
     # Test file deletion
-    if ! sudo -u abc rm "$test_file"; then
+    if ! sudo -u appbox rm "$test_file"; then
         log_fail "Cannot delete files from user directory"
         return $FAIL
     fi
@@ -245,20 +245,20 @@ test_desktop_customization() {
     
     # Check if user can modify desktop configuration
     local config_dir="/config/.config/test_config"
-    if ! sudo -u abc mkdir -p "$config_dir"; then
+    if ! sudo -u appbox mkdir -p "$config_dir"; then
         log_fail "Cannot create configuration directories"
         return $FAIL
     fi
     
     # Test configuration file creation
     local config_file="$config_dir/test.conf"
-    if ! sudo -u abc bash -c "echo 'test=value' > '$config_file'"; then
+    if ! sudo -u appbox bash -c "echo 'test=value' > '$config_file'"; then
         log_fail "Cannot create configuration files"
         return $FAIL
     fi
     
     # Cleanup test configuration
-    sudo -u abc rm -rf "$config_dir"
+    sudo -u appbox rm -rf "$config_dir"
     
     log_pass "Desktop customization is working correctly"
     return $PASS
@@ -277,13 +277,13 @@ test_clipboard_functionality() {
     local test_text="Clipboard test content"
     
     # Test clipboard writing
-    if ! sudo -u abc bash -c "echo '$test_text' | DISPLAY=:1 xclip -selection clipboard"; then
+    if ! sudo -u appbox bash -c "echo '$test_text' | DISPLAY=:1 xclip -selection clipboard"; then
         log_fail "Cannot write to clipboard"
         return $FAIL
     fi
     
     # Test clipboard reading
-    local clipboard_content=$(sudo -u abc bash -c "DISPLAY=:1 xclip -selection clipboard -o")
+    local clipboard_content=$(sudo -u appbox bash -c "DISPLAY=:1 xclip -selection clipboard -o")
     if [[ "$clipboard_content" != "$test_text" ]]; then
         log_fail "Cannot read from clipboard"
         return $FAIL
@@ -321,19 +321,19 @@ test_docker_integration() {
     log_test "Testing Docker integration..."
     
     # Check if Docker is accessible to user
-    if ! sudo -u abc docker info >/dev/null 2>&1; then
+    if ! sudo -u appbox docker info >/dev/null 2>&1; then
         log_fail "Docker is not accessible to user"
         return $FAIL
     fi
     
     # Test basic Docker operations
-    if ! sudo -u abc docker ps >/dev/null 2>&1; then
+    if ! sudo -u appbox docker ps >/dev/null 2>&1; then
         log_fail "Cannot list Docker containers"
         return $FAIL
     fi
     
     # Test Docker image operations
-    if ! sudo -u abc docker images >/dev/null 2>&1; then
+    if ! sudo -u appbox docker images >/dev/null 2>&1; then
         log_fail "Cannot list Docker images"
         return $FAIL
     fi
@@ -358,7 +358,7 @@ test_system_responsiveness() {
     
     # Test display server responsiveness
     local start_time=$(date +%s.%3N)
-    sudo -u abc DISPLAY=:1 xset q >/dev/null 2>&1
+    sudo -u appbox DISPLAY=:1 xset q >/dev/null 2>&1
     local end_time=$(date +%s.%3N)
     local display_time=$(echo "$end_time - $start_time" | bc)
     
@@ -375,13 +375,13 @@ test_error_handling() {
     log_test "Testing error handling..."
     
     # Test handling of invalid file operations
-    if sudo -u abc touch "/root/invalid_file.txt" 2>/dev/null; then
+    if sudo -u appbox touch "/root/invalid_file.txt" 2>/dev/null; then
         log_fail "System allows invalid file operations"
         return $FAIL
     fi
     
     # Test handling of invalid commands
-    if sudo -u abc DISPLAY=:1 /nonexistent/command 2>/dev/null; then
+    if sudo -u appbox DISPLAY=:1 /nonexistent/command 2>/dev/null; then
         log_fail "System does not handle invalid commands properly"
         return $FAIL
     fi

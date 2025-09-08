@@ -246,19 +246,19 @@ diagnose_audio() {
             echo ""
             
             echo "PulseAudio info:"
-            sudo -u abc PULSE_RUNTIME_PATH=/defaults pactl info || echo "Cannot get PulseAudio info"
+            sudo -u appbox PULSE_RUNTIME_PATH=/defaults pactl info || echo "Cannot get PulseAudio info"
             echo ""
             
             echo "Audio sinks:"
-            sudo -u abc PULSE_RUNTIME_PATH=/defaults pactl list sinks || echo "Cannot list audio sinks"
+            sudo -u appbox PULSE_RUNTIME_PATH=/defaults pactl list sinks || echo "Cannot list audio sinks"
             echo ""
             
             echo "Audio sources:"
-            sudo -u abc PULSE_RUNTIME_PATH=/defaults pactl list sources || echo "Cannot list audio sources"
+            sudo -u appbox PULSE_RUNTIME_PATH=/defaults pactl list sources || echo "Cannot list audio sources"
             echo ""
             
             echo "Audio modules:"
-            sudo -u abc PULSE_RUNTIME_PATH=/defaults pactl list modules || echo "Cannot list audio modules"
+            sudo -u appbox PULSE_RUNTIME_PATH=/defaults pactl list modules || echo "Cannot list audio modules"
             echo ""
         else
             echo "PulseAudio is not running"
@@ -370,7 +370,7 @@ diagnose_docker() {
             echo ""
             
             echo "User access test:"
-            sudo -u abc docker info >/dev/null 2>&1 && echo "User 'abc' can access Docker" || echo "User 'abc' cannot access Docker"
+            sudo -u appbox docker info >/dev/null 2>&1 && echo "User 'appbox' can access Docker" || echo "User 'appbox' cannot access Docker"
             echo ""
         else
             echo "Docker service is not running"
@@ -545,15 +545,15 @@ validate_configuration() {
         echo ""
         
         echo "==================== USER CONFIGURATION ===================="
-        echo "User 'abc' info:"
-        id abc || echo "User 'abc' not found"
+        echo "User 'appbox' info:"
+        id appbox || echo "User 'appbox' not found"
         echo ""
         
-        echo "User 'abc' groups:"
-        groups abc || echo "Cannot get user groups"
+        echo "User 'appbox' groups:"
+        groups appbox || echo "Cannot get user groups"
         echo ""
         
-        echo "User 'abc' home directory:"
+        echo "User 'appbox' home directory:"
         ls -la /config || echo "Cannot list home directory"
         echo ""
         

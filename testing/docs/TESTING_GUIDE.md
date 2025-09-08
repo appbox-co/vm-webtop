@@ -214,7 +214,7 @@ sudo ./testing/test-framework.sh -c user-acceptance
    pgrep -af "xfce4-session|openbox"
    
    # Test audio system
-   sudo -u abc PULSE_RUNTIME_PATH=/defaults pactl info
+   sudo -u appbox PULSE_RUNTIME_PATH=/defaults pactl info
    ```
 
 ### Functional Testing
@@ -303,10 +303,10 @@ systemctl restart selkies-desktop
 systemctl status selkies-pulseaudio
 
 # Check audio devices
-sudo -u abc PULSE_RUNTIME_PATH=/defaults pactl list sinks
+sudo -u appbox PULSE_RUNTIME_PATH=/defaults pactl list sinks
 
 # Check audio modules
-sudo -u abc PULSE_RUNTIME_PATH=/defaults pactl list modules
+sudo -u appbox PULSE_RUNTIME_PATH=/defaults pactl list modules
 
 # Restart audio service
 systemctl restart selkies-pulseaudio
@@ -320,10 +320,10 @@ systemctl restart selkies-pulseaudio
 systemctl status docker
 
 # Check user groups
-groups abc
+groups appbox
 
 # Add user to docker group
-usermod -aG docker abc
+usermod -aG docker appbox
 
 # Restart Docker service
 systemctl restart docker

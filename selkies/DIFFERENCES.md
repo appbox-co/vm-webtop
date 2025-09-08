@@ -55,7 +55,7 @@ This document outlines the differences between the original `docker-baseimage-se
 - **Original**: Container-based user management
 - **VM Implementation**: Standard Linux user management
 - **Changes**: 
-  - User `abc` created with proper home directory
+  - User `appbox` created with proper home directory
   - Docker group membership handled during installation
   - Sudo permissions configured for VM environment
 

@@ -50,9 +50,9 @@ check_dependencies() {
         exit 1
     fi
     
-    # Check if abc user exists
-    if ! id -u abc &>/dev/null; then
-        error "User 'abc' not found. Please install selkies first."
+    # Check if appbox user exists
+    if ! id -u appbox &>/dev/null; then
+        error "User 'appbox' not found. Please install selkies first."
         exit 1
     fi
     
@@ -161,7 +161,7 @@ install_rootfs_files() {
     # Copy configuration files
     info "Copying XFCE configuration files..."
     cp -r "$SCRIPT_DIR/rootfs/defaults" /
-    chown -R abc:abc /defaults
+    chown -R appbox:appbox /defaults
     
     # Ensure webtop flag file directory exists
     mkdir -p /etc/selkies

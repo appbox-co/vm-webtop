@@ -5,8 +5,8 @@ Requires=xvfb.service
 
 [Service]
 Type=simple
-User=abc
-Group=abc
+User=appbox
+Group=appbox
 Environment=PULSE_RUNTIME_PATH=/defaults
 Environment=HOME=/config
 ExecStart=/usr/local/bin/start-selkies-pulseaudio.sh

@@ -5,8 +5,8 @@ Requires=selkies.service selkies-setup.service
 
 [Service]
 Type=simple
-User=abc
-Group=abc
+User=appbox
+Group=appbox
 Environment=HOME=/config
 Environment=DISPLAY=:1
 Environment=LC_ALL=

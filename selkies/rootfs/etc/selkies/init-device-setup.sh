@@ -20,19 +20,19 @@ mknod /dev/input/event1003 c 13 1067 2>/dev/null || true
 chmod 777 /dev/input/js* /dev/input/event* 2>/dev/null || true
 
 # Fix permissions on selkies web directory
-chown -R abc:abc /usr/share/selkies/www/ 2>/dev/null || true
+chown -R appbox:appbox /usr/share/selkies/www/ 2>/dev/null || true
 
 # Ensure config directory has proper ownership
-chown -R abc:abc /config 2>/dev/null || true
+chown -R appbox:appbox /config 2>/dev/null || true
 
 # Create temporary files with proper permissions
 touch /tmp/selkies_js.log
 chmod 666 /tmp/selkies_js.log
-chown abc:abc /tmp/selkies_js.log
+chown appbox:appbox /tmp/selkies_js.log
 
 # Create defaults directory if it doesn't exist
 mkdir -p /defaults
-chown abc:abc /defaults
+chown appbox:appbox /defaults
 
 # Video device permissions setup (moved from init-video.sh)
 echo "Setting up video device permissions..."
@@ -45,14 +45,14 @@ do
         VIDEO_GID=$(stat -c '%g' "${i}")
         VIDEO_UID=$(stat -c '%u' "${i}")
         # check if user matches device
-        if id -u abc | grep -qw "${VIDEO_UID}"; then
+        if id -u appbox | grep -qw "${VIDEO_UID}"; then
             echo "**** permissions for ${i} are good ****"
         else
             # check if group matches and that device has group rw
-            if id -G abc | grep -qw "${VIDEO_GID}" && [ $(stat -c '%A' "${i}" | cut -b 5,6) = "rw" ]; then
+            if id -G appbox | grep -qw "${VIDEO_GID}" && [ $(stat -c '%A' "${i}" | cut -b 5,6) = "rw" ]; then
                 echo "**** permissions for ${i} are good ****"
             # check if device needs to be added to video group
-            elif ! id -G abc | grep -qw "${VIDEO_GID}"; then
+            elif ! id -G appbox | grep -qw "${VIDEO_GID}"; then
                 # check if video group needs to be created
                 VIDEO_NAME=$(getent group "${VIDEO_GID}" | awk -F: '{print $1}')
                 if [ -z "${VIDEO_NAME}" ]; then
@@ -62,7 +62,7 @@ do
                     echo "**** creating video group ${VIDEO_NAME} with id ${VIDEO_GID} ****"
                 fi
                 echo "**** adding ${i} to video group ${VIDEO_NAME} with id ${VIDEO_GID} ****"
-                usermod -a -G "${VIDEO_NAME}" abc 2>/dev/null || true
+                usermod -a -G "${VIDEO_NAME}" appbox 2>/dev/null || true
             fi
             # check if device has group rw
             if [ $(stat -c '%A' "${i}" | cut -b 5,6) != "rw" ]; then

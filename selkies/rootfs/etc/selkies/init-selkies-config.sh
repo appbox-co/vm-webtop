@@ -4,18 +4,18 @@
 if [[ ! -f /config/.config/openbox/autostart ]]; then
   mkdir -p /config/.config/openbox
   cp /defaults/autostart /config/.config/openbox/autostart
-  chown -R abc:abc /config/.config/openbox
+  chown -R appbox:appbox /config/.config/openbox
 fi
 if [[ ! -f /config/.config/openbox/menu.xml ]]; then
   mkdir -p /config/.config/openbox && \
   cp /defaults/menu.xml /config/.config/openbox/menu.xml && \
-  chown -R abc:abc /config/.config
+  chown -R appbox:appbox /config/.config
 fi
 
 # XDG Home
 if [ ! -d "${HOME}/.XDG" ]; then
   mkdir -p ${HOME}/.XDG
-  chown abc:abc ${HOME}/.XDG
+  chown appbox:appbox ${HOME}/.XDG
 fi
 
 # Remove window borders
@@ -39,14 +39,14 @@ if [[ ! -f $HOME/.local/bin/pversion ]]; then
   mkdir -p $HOME/.local/bin
   cp /proot-apps/* ${HOME}/.local/bin/
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> $HOME/.bashrc
-  chown abc:abc \
+  chown appbox:appbox \
     ${HOME}/.bashrc \
     ${HOME}/.local/ \
     ${HOME}/.local/bin \
     ${HOME}/.local/bin/{ncat,proot-apps,proot,jq,pversion}
 elif ! diff -q /proot-apps/pversion ${HOME}/.local/bin/pversion > /dev/null; then
   cp /proot-apps/* ${HOME}/.local/bin/
-  chown abc:abc ${HOME}/.local/bin/{ncat,proot-apps,proot,jq,pversion}
+  chown appbox:appbox ${HOME}/.local/bin/{ncat,proot-apps,proot,jq,pversion}
 fi
 
 # Wait for device setup to complete

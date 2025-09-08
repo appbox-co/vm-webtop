@@ -7,9 +7,5 @@ if ! pgrep chromium > /dev/null;then
   rm -f $HOME/.config/chromium/Singleton*
 fi
 
-# Run normally on privved containers or modified un non priv
-if grep -q 'Seccomp:.0' /proc/1/status; then
-  ${BIN} --no-first-run --password-store=basic "$@"
-else
-  ${BIN} --no-first-run --password-store=basic --no-sandbox --test-type "$@"
-fi 
+# This is always required, due to apparmor restrictions from Ubuntu 23.10 onwards
+${BIN} --no-first-run --password-store=basic --no-sandbox --test-type "$@"

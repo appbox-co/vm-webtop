@@ -76,31 +76,31 @@ test_file_permissions() {
 test_user_privileges() {
     log_info "Testing user privileges..."
     
-    # Check if abc user has appropriate privileges
-    if ! id -u abc >/dev/null 2>&1; then
-        log_fail "User 'abc' does not exist"
+    # Check if appbox user has appropriate privileges
+    if ! id -u appbox >/dev/null 2>&1; then
+        log_fail "User 'appbox' does not exist"
         return $FAIL
     fi
     
-    # Check if abc user is not in sudo group (should not have sudo access)
-    if id -nG abc | grep -q "sudo"; then
-        log_fail "User 'abc' has sudo privileges (security risk)"
+    # Check if appbox user is not in sudo group (should not have sudo access)
+    if id -nG appbox | grep -q "sudo"; then
+        log_fail "User 'appbox' has sudo privileges (security risk)"
         return $FAIL
     fi
     
-    # Check if abc user has appropriate group memberships
+    # Check if appbox user has appropriate group memberships
     local required_groups=("docker" "audio" "video" "pulse" "pulse-access")
     for group in "${required_groups[@]}"; do
-        if ! id -nG abc | grep -q "$group"; then
-            log_fail "User 'abc' is not in required group: $group"
+        if ! id -nG appbox | grep -q "$group"; then
+            log_fail "User 'appbox' is not in required group: $group"
             return $FAIL
         fi
     done
     
-    # Check if abc user home directory is properly restricted
+    # Check if appbox user home directory is properly restricted
     local home_owner=$(stat -c "%U" /config)
-    if [[ "$home_owner" != "abc" ]]; then
-        log_fail "/config directory is not owned by abc user"
+    if [[ "$home_owner" != "appbox" ]]; then
+        log_fail "/config directory is not owned by appbox user"
         return $FAIL
     fi
     

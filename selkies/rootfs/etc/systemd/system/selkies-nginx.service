@@ -6,7 +6,7 @@ Requires=selkies-pulseaudio.service
 [Service]
 Type=simple
 Environment=CUSTOM_PORT=443
-Environment=CUSTOM_USER=abc
+Environment=CUSTOM_USER=appbox
 Environment=SUBFOLDER=/
 Environment=HOME=/config
 ExecStartPre=/bin/bash /etc/selkies/init-nginx.sh

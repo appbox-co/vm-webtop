@@ -260,7 +260,7 @@ test_audio_latency() {
     
     # Run multiple audio operations
     for i in $(seq 1 5); do
-        sudo -u abc PULSE_RUNTIME_PATH=/defaults pactl info >/dev/null 2>&1
+        sudo -u appbox PULSE_RUNTIME_PATH=/defaults pactl info >/dev/null 2>&1
     done
     
     local end_time=$(date +%s.%3N)
@@ -285,9 +285,9 @@ test_docker_performance() {
     local start_time=$(date +%s.%3N)
     
     # Run Docker operations
-    sudo -u abc docker info >/dev/null 2>&1
-    sudo -u abc docker ps >/dev/null 2>&1
-    sudo -u abc docker images >/dev/null 2>&1
+    sudo -u appbox docker info >/dev/null 2>&1
+    sudo -u appbox docker ps >/dev/null 2>&1
+    sudo -u appbox docker images >/dev/null 2>&1
     
     local end_time=$(date +%s.%3N)
     local total_time=$(echo "$end_time - $start_time" | bc)

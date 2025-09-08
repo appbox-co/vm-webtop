@@ -285,7 +285,7 @@ This document tracks the development progress of the Ubuntu VM Webtop Environmen
    - Copied all configuration files to rootfs structure following Linux filesystem hierarchy
    - Set up environment variables matching original Dockerfile
    - Created /config directory structure for user data
-   - Implemented user management with abc user and proper permissions
+   - Implemented user management with appbox user and proper permissions
 
 4. **Documentation** ✅
    - Created comprehensive DIFFERENCES.md documenting all changes from original Dockerfile
@@ -306,7 +306,7 @@ This document tracks the development progress of the Ubuntu VM Webtop Environmen
 - **systemd Services**: Complete service dependency chain with proper startup order
 - **Configuration Scripts**: Helper scripts for nginx, selkies, video devices, and desktop environment
 - **Environment Setup**: All environment variables and system configuration preserved
-- **User Management**: abc user with proper permissions and group memberships
+- **User Management**: appbox user with proper permissions and group memberships
 
 #### systemd Service Architecture:
 ```
@@ -832,7 +832,7 @@ selkies-desktop.service (Desktop environment)
 #### 2. systemd Service Configuration ✅
 - **Service**: `selkies-pulseaudio.service`
 - **Environment**: `PULSE_SERVER=unix:/defaults/native`
-- **User**: `abc` (proper permissions)
+- **User**: `appbox` (proper permissions)
 - **Cleanup**: Automatic removal of stale lock files
 - **Logging**: Full journal integration for debugging
 

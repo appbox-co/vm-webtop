@@ -36,22 +36,22 @@ until pactl info >/dev/null 2>&1; do
 done
 echo "$(date): PulseAudio is ready!"
 
-# # Check if output sink already exists before creating
-# echo "$(date): Checking for existing sinks..."
-# if ! pactl list short sinks | grep -q "^[0-9]*[[:space:]]*output[[:space:]]"; then
-#     echo "$(date): Creating output sink..."
-#     pactl load-module module-null-sink sink_name="output" sink_properties=device.description="output"
-# else
-#     echo "$(date): Output sink already exists, skipping creation"
-# fi
+# Check if output sink already exists before creating
+echo "$(date): Checking for existing sinks..."
+if ! pactl list short sinks | grep -q "^[0-9]*[[:space:]]*output[[:space:]]"; then
+    echo "$(date): Creating output sink..."
+    pactl load-module module-null-sink sink_name="output" sink_properties=device.description="output"
+else
+    echo "$(date): Output sink already exists, skipping creation"
+fi
 
-# # Check if input sink already exists before creating (for microphone from browser)
-# if ! pactl list short sinks | grep -q "^[0-9]*[[:space:]]*input[[:space:]]"; then
-#     echo "$(date): Creating input sink for browser microphone..."
-#     pactl load-module module-null-sink sink_name="input" sink_properties=device.description="input"
-# else
-#     echo "$(date): Input sink already exists, skipping creation"
-# fi
+# Check if input sink already exists before creating (for microphone from browser)
+if ! pactl list short sinks | grep -q "^[0-9]*[[:space:]]*input[[:space:]]"; then
+    echo "$(date): Creating input sink for browser microphone..."
+    pactl load-module module-null-sink sink_name="input" sink_properties=device.description="input"
+else
+    echo "$(date): Input sink already exists, skipping creation"
+fi
 
 # # Create virtual microphone source for WebRTC input (monitor the input sink where browser sends mic audio)
 # echo "$(date): Creating virtual microphone source for WebRTC..."
@@ -74,8 +74,8 @@ echo "$(date): PulseAudio is ready!"
 # echo "$(date): - Desktop audio output -> 'output' sink -> 'output.monitor' source -> WebRTC to browser"
 # echo "$(date): - Browser microphone -> WebRTC -> 'input' sink -> 'input.monitor' source -> 'VirtualMic' -> desktop apps"
 
-# echo "$(date): PulseAudio setup completed successfully"
+echo "$(date): PulseAudio setup completed successfully"
 
-# # Wait for the PulseAudio process
-# echo "$(date): Waiting for PulseAudio process..."
+# Wait for the PulseAudio process
+echo "$(date): Waiting for PulseAudio process..."
 wait $PULSE_PID

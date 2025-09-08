@@ -127,7 +127,7 @@ ls -la /etc/selkies/
 cat /etc/environment
 
 # Test user setup
-su - abc -c "id"
+su - appbox -c "id"
 ```
 
 ## Phase 4: Webtop Component Deployment
@@ -233,7 +233,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 # Set proper permissions
 chmod 600 /config/ssl/cert.key
-chown abc:abc /config/ssl/cert.*
+chown appbox:appbox /config/ssl/cert.*
 ```
 
 ### 2. Performance Optimization
@@ -242,8 +242,8 @@ chown abc:abc /config/ssl/cert.*
 systemctl daemon-reload
 
 # Configure resource limits
-echo "abc soft nofile 65536" >> /etc/security/limits.conf
-echo "abc hard nofile 65536" >> /etc/security/limits.conf
+echo "appbox soft nofile 65536" >> /etc/security/limits.conf
+echo "appbox hard nofile 65536" >> /etc/security/limits.conf
 
 # Optimize kernel parameters
 echo "net.core.rmem_max = 16777216" >> /etc/sysctl.conf
@@ -291,14 +291,14 @@ systemctl status selkies-desktop
 ### 2. User Management
 ```bash
 # Check user configuration
-id abc
-groups abc
+id appbox
+groups appbox
 
 # Reset user password (if needed)
-passwd abc
+passwd appbox
 
 # Update user permissions
-usermod -aG docker abc
+usermod -aG docker appbox
 ```
 
 ### 3. Configuration Updates
