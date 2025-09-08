@@ -112,7 +112,7 @@ test_network_security() {
     log_info "Testing network security..."
     
     # Check if only necessary ports are exposed
-    local allowed_ports=("443" "8081" "8082" "9081")
+    local allowed_ports=("443" "8082" "9081")
     local listening_ports=$(netstat -tlnp | grep LISTEN | awk '{print $4}' | cut -d: -f2 | sort -u)
     
     for port in $listening_ports; do
@@ -182,10 +182,10 @@ test_port_security() {
     log_info "Testing port security..."
     
     # Define allowed ports (updated for HTTPS-only)
-    local allowed_ports=("443" "8081" "8082" "9081")
+    local allowed_ports=("443" "8082" "9081")
     
     # Test for exposed ports
-    local exposed_ports=$(netstat -tlnp | grep -E ":(443|8081|8082|9081)\b" | wc -l)
+    local exposed_ports=$(netstat -tlnp | grep -E ":(443|8082|9081)\b" | wc -l)
     
     if [[ $exposed_ports -gt 0 ]]; then
         log_pass "Required ports are exposed"

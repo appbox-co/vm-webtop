@@ -462,7 +462,7 @@ build_selkies_from_source() {
     local temp_dir=$(mktemp -d)
     cd "$temp_dir"
     
-    curl -o selkies.tar.gz -L "https://github.com/selkies-project/selkies/archive/6cbd7f04cdf88a4cf90dbdbc398407746718e33d.tar.gz"
+    curl -o selkies.tar.gz -L "https://github.com/selkies-project/selkies/archive/c6f411cbf3742df3cc035ff446cc7303bc0d6c99.tar.gz"
     tar xf selkies.tar.gz
     cd selkies-*
     

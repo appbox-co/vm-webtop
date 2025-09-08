@@ -59,6 +59,11 @@ fi
 # Set permissions on temporary files
 chmod 777 /tmp/selkies* 2>/dev/null || true
 
+# Set PulseAudio environment variables for desktop applications
+echo "Setting PulseAudio environment..."
+export PULSE_SERVER=unix:/defaults/native
+export PULSE_RUNTIME_PATH=/defaults
+
 # Set sane resolution before starting apps with better error handling
 echo "Configuring display resolution..."
 

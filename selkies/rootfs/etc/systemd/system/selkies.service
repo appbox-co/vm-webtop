@@ -25,7 +25,7 @@ Environment=TITLE=Selkies
 Environment=DEV_MODE=
 ExecStartPre=/bin/bash /etc/selkies/init-selkies-config.sh
 ExecStartPre=/bin/bash -c 'until xdpyinfo -display :1 >/dev/null 2>&1; do echo "Waiting for X server..."; sleep 1; done'
-ExecStart=/bin/bash -c 'rm -rf "${HOME}/.cache/gstreamer-1.0"; exec selkies --addr="localhost" --port="8081" --enable_basic_auth="false" --enable_metrics_http="true" --metrics_http_port="9081" --mode="websockets" --audio_device_name="VirtualMic"'
+ExecStart=/bin/bash -c 'rm -rf "${HOME}/.cache/gstreamer-1.0"; exec selkies'
 WorkingDirectory=/config
 Restart=always
 RestartSec=5
