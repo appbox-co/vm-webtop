@@ -768,7 +768,7 @@ create_systemd_services() {
     
     # Verify user service files exist in rootfs
     info "Verifying user services in rootfs..."
-    local user_services=("selkies-pulseaudio.service" "selkies.service" "selkies-desktop.service")
+    local user_services=("selkies-pulseaudio.service" "selkies.service")
     
     for service in "${user_services[@]}"; do
         if [[ ! -f "$SCRIPT_DIR/rootfs/etc/systemd/user-services/$service" ]]; then
@@ -896,7 +896,6 @@ main() {
         if sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user daemon-reload; then
             sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-pulseaudio.service
             sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies.service
-            sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-desktop.service
             info "✓ Desktop user services enabled"
         else
             warn "Could not enable user services immediately - they will be available after reboot"
