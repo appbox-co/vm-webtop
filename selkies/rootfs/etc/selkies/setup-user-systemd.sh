@@ -28,6 +28,11 @@ if ! systemctl --user --machine="$USER_NAME"@ status >/dev/null 2>&1; then
     sleep 1
 fi
 
+# Disable user PulseAudio services since we use system services
+echo "Disabling conflicting user PulseAudio services..."
+sudo -u "$USER_NAME" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user disable pulseaudio.service pulseaudio.socket 2>/dev/null || true
+sudo -u "$USER_NAME" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user mask pulseaudio.service pulseaudio.socket 2>/dev/null || true
+
 # Test user systemd functionality
 if sudo -u "$USER_NAME" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user daemon-reload 2>/dev/null; then
     echo "✓ User systemd is working for $USER_NAME"

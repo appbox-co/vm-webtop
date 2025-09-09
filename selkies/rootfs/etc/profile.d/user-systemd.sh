@@ -23,4 +23,15 @@ if [[ "$USER" == "appbox" ]] || [[ "$LOGNAME" == "appbox" ]]; then
     
     # Set up systemd user environment
     export SYSTEMD_USER_RUNTIME_DIR="$XDG_RUNTIME_DIR/systemd"
+    
+    # Add Flatpak directories to XDG_DATA_DIRS for desktop integration
+    if [[ -d "/var/lib/flatpak/exports/share" ]] || [[ -d "$HOME/.local/share/flatpak/exports/share" ]]; then
+        FLATPAK_DIRS=""
+        [[ -d "/var/lib/flatpak/exports/share" ]] && FLATPAK_DIRS="/var/lib/flatpak/exports/share"
+        [[ -d "$HOME/.local/share/flatpak/exports/share" ]] && FLATPAK_DIRS="$FLATPAK_DIRS:$HOME/.local/share/flatpak/exports/share"
+        
+        if [[ -n "$FLATPAK_DIRS" ]]; then
+            export XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:$FLATPAK_DIRS"
+        fi
+    fi
 fi

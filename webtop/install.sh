@@ -127,16 +127,25 @@ apply_xfce_tweaks() {
         /usr/share/applications/chromium.desktop
     
     # Move original binaries to backup names
-    if [[ -f /usr/bin/exo-open ]]; then
+    if [[ -f /usr/bin/exo-open ]] && [[ ! -f /usr/bin/exo-open-real ]]; then
+        info "Moving original exo-open to exo-open-real..."
         mv /usr/bin/exo-open /usr/bin/exo-open-real
+    elif [[ -f /usr/bin/exo-open-real ]]; then
+        info "exo-open-real already exists, skipping move"
     fi
     
-    if [[ -f /usr/bin/thunar ]]; then
+    if [[ -f /usr/bin/thunar ]] && [[ ! -f /usr/bin/thunar-original ]]; then
+        info "Moving original thunar to thunar-original..."
         mv /usr/bin/thunar /usr/bin/thunar-original
+    elif [[ -f /usr/bin/thunar-original ]]; then
+        info "thunar-original already exists, skipping move"
     fi
     
-    if [[ -f /usr/bin/chromium ]]; then
-        mv /usr/bin/chromium /usr/bin/chromium-original
+    if [[ -f /usr/bin/chromium ]] && [[ ! -f /usr/bin/chromium-browser ]]; then
+        info "Moving original chromium to chromium-browser..."
+        mv /usr/bin/chromium /usr/bin/chromium-browser
+    elif [[ -f /usr/bin/chromium-browser ]]; then
+        info "chromium-browser already exists, skipping move"
     fi
     
     # Remove xscreensaver autostart
@@ -168,9 +177,26 @@ install_rootfs_files() {
     
     # Copy modified binaries
     info "Installing modified browser wrappers..."
-    cp "$SCRIPT_DIR/rootfs/usr/bin/chromium" /usr/bin/
-    cp "$SCRIPT_DIR/rootfs/usr/bin/exo-open" /usr/bin/
-    cp "$SCRIPT_DIR/rootfs/usr/bin/thunar" /usr/bin/
+    
+    # Only copy wrappers if the real binaries exist (ensuring we don't overwrite them)
+    if [[ -f /usr/bin/chromium-browser ]]; then
+        cp "$SCRIPT_DIR/rootfs/usr/bin/chromium" /usr/bin/
+    else
+        warn "chromium-browser not found, skipping chromium wrapper installation"
+    fi
+    
+    if [[ -f /usr/bin/exo-open-real ]]; then
+        cp "$SCRIPT_DIR/rootfs/usr/bin/exo-open" /usr/bin/
+    else
+        warn "exo-open-real not found, skipping exo-open wrapper installation"
+    fi
+    
+    if [[ -f /usr/bin/thunar-original ]]; then
+        cp "$SCRIPT_DIR/rootfs/usr/bin/thunar" /usr/bin/
+    else
+        warn "thunar-original not found, skipping thunar wrapper installation"
+    fi
+    
     cp "$SCRIPT_DIR/rootfs/usr/local/bin/wrapped-chromium" /usr/local/bin/
     
     # Make scripts executable

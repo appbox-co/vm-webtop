@@ -376,6 +376,7 @@ install_main_packages() {
     info "Installing desktop environment and utilities..."
     install_packages \
         dunst \
+        flatpak \
         libnginx-mod-http-fancyindex \
         nginx \
         openbox \
@@ -618,6 +619,23 @@ setup_users() {
     
     # Enable systemd-logind for proper user sessions
     systemctl enable systemd-logind
+    
+    # Set up Flatpak for appbox user
+    info "Setting up Flatpak for appbox user..."
+    mkdir -p /var/lib/flatpak
+    mkdir -p /home/appbox/.local/share/flatpak
+    chown -R appbox:appbox /home/appbox/.local/share/flatpak
+    
+    # Add Flathub repository system-wide
+    if command -v flatpak >/dev/null 2>&1; then
+        flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
+        info "Flathub repository added"
+    fi
+    
+    # Disable user PulseAudio services since we use system services
+    info "Disabling user PulseAudio services (using system services instead)..."
+    sudo -u appbox XDG_RUNTIME_DIR="/run/user/$(id -u appbox)" systemctl --user disable pulseaudio.service pulseaudio.socket 2>/dev/null || true
+    sudo -u appbox XDG_RUNTIME_DIR="/run/user/$(id -u appbox)" systemctl --user mask pulseaudio.service pulseaudio.socket 2>/dev/null || true
     
     info "✓ User setup completed"
 }
