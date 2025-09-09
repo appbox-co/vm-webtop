@@ -2,6 +2,9 @@
 
 if [ "${2}" == "WebBrowser" ]; then
   /usr/bin/xdg-open /usr/share/applications/chromium.desktop
+elif [ "${2}" == "TerminalEmulator" ]; then
+  # Launch terminal directly to avoid recursion
+  /usr/local/bin/terminal-wrapper
 else 
   /usr/bin/exo-open-real "$@"
 fi 
