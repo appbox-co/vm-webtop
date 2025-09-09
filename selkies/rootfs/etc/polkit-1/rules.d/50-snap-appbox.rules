@@ -1,0 +1,8 @@
+// Allow appbox user to manage Snap packages
+polkit.addRule(function(action, subject) {
+    // Allow all Snap operations for appbox user
+    if (action.id.indexOf("io.snapcraft.snapd") === 0 &&
+        subject.user == "appbox") {
+        return polkit.Result.YES;
+    }
+});

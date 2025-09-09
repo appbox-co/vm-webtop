@@ -377,12 +377,14 @@ install_main_packages() {
     install_packages \
         dunst \
         flatpak \
+        ibus \
         libnginx-mod-http-fancyindex \
         nginx \
         openbox \
         pavucontrol \
         pulseaudio \
         pulseaudio-utils \
+        snapd \
         stterm \
         xdg-utils \
         xdotool \
@@ -630,6 +632,28 @@ setup_users() {
     if command -v flatpak >/dev/null 2>&1; then
         flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
         info "Flathub repository added"
+    fi
+    
+    # Set up Snap and install snap-store
+    info "Setting up Snap and installing snap-store..."
+    if command -v snap >/dev/null 2>&1; then
+        # Enable snapd service
+        systemctl enable snapd
+        systemctl start snapd
+        
+        # Wait for snapd to be ready
+        sleep 3
+        
+        # Install snap-store
+        snap install snap-store 2>/dev/null || true
+        
+        # Create necessary directories for appbox user
+        mkdir -p /home/appbox/snap/snap-store/common/.cache
+        mkdir -p /home/appbox/snap/snap-store/current/.config/ibus/bus
+        mkdir -p /home/appbox/snap/snap-store/current/.local/share/snap-store
+        chown -R appbox:appbox /home/appbox/snap
+        
+        info "snap-store installed and configured"
     fi
     
     # Disable user PulseAudio services since we use system services

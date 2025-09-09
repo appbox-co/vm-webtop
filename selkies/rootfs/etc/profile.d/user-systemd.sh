@@ -34,4 +34,16 @@ if [[ "$USER" == "appbox" ]] || [[ "$LOGNAME" == "appbox" ]]; then
             export XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:$FLATPAK_DIRS"
         fi
     fi
+    
+    # Add Snap directories to XDG_DATA_DIRS for desktop integration
+    if [[ -d "/snap/bin" ]]; then
+        export PATH="$PATH:/snap/bin"
+    fi
+    
+    # Set up IBUS for snap applications
+    if [[ -n "$DISPLAY" ]]; then
+        export GTK_IM_MODULE=ibus
+        export XMODIFIERS=@im=ibus
+        export QT_IM_MODULE=ibus
+    fi
 fi

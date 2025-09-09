@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Snap Store
+Comment=Install and manage snap packages
+Exec=snap-store
+Icon=snap-store
+Terminal=false
+Type=Application
+Categories=System;PackageManager;
+StartupNotify=true
+MimeType=application/x-snapd-app;
