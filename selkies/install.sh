@@ -592,7 +592,7 @@ setup_users() {
     # Add appbox to docker group
     usermod -aG docker appbox
     
-    # Enable systemd lingering for appbox user (allows user services to start at boot)
+    # Enable systemd lingering for appbox user (allows user systemd to work)
     info "Enabling systemd lingering for appbox user..."
     loginctl enable-linger appbox
     
@@ -600,33 +600,8 @@ setup_users() {
     mkdir -p /home/appbox/.config/systemd/user
     chown -R appbox:appbox /home/appbox/.config
     
-    # Try to enable user services (better system integration when available)
-    info "Setting up user systemd services..."
-    export XDG_RUNTIME_DIR="/run/user/$(id -u appbox)"
-    mkdir -p "$XDG_RUNTIME_DIR"
-    chown appbox:appbox "$XDG_RUNTIME_DIR"
-    chmod 700 "$XDG_RUNTIME_DIR"
-    
-    # For desktop environments, we MUST have user systemd working
-    info "Setting up desktop session with user systemd..."
-    
     # Enable systemd-logind for proper user sessions
     systemctl enable systemd-logind
-    
-    # Test if user systemd can work
-    if sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user daemon-reload 2>/dev/null; then
-        info "✓ User systemd is working - desktop services will be enabled after installation"
-    else
-        warn "User systemd not immediately available - will be configured after service installation"
-        info "Desktop services will be enabled after user service files are installed"
-    fi
-    
-    # Start user systemd session if not already running
-    if ! systemctl --user --machine=appbox@ status >/dev/null 2>&1; then
-        info "Starting user systemd session for appbox..."
-        # This will be started automatically by lingering, but we can ensure it's ready
-        sudo -u appbox systemd --user --daemon 2>/dev/null || true
-    fi
     
     info "✓ User setup completed"
 }
@@ -751,33 +726,19 @@ setup_configuration_files() {
 # =============================================================================
 
 create_systemd_services() {
-    info "Verifying system services in rootfs..."
+    info "Verifying systemd services in rootfs..."
     
-    # Verify system service files exist in rootfs
-    # Note: selkies-pulseaudio.service and selkies.service are now user services
-    local system_services=("selkies-setup.service" "xvfb.service" "selkies-nginx.service" "selkies-desktop.service")
+    # Verify all systemd service files exist in rootfs
+    local services=("selkies-setup.service" "xvfb.service" "selkies-pulseaudio.service" "selkies-nginx.service" "selkies.service" "selkies-desktop.service")
     
-    for service in "${system_services[@]}"; do
+    for service in "${services[@]}"; do
         if [[ ! -f "$SCRIPT_DIR/rootfs/etc/systemd/system/$service" ]]; then
-            error "Missing system service file: $service"
+            error "Missing systemd service file: $service"
             return 1
         fi
     done
     
-    info "✓ All system service files verified in rootfs"
-    
-    # Verify user service files exist in rootfs
-    info "Verifying user services in rootfs..."
-    local user_services=("selkies-pulseaudio.service" "selkies.service")
-    
-    for service in "${user_services[@]}"; do
-        if [[ ! -f "$SCRIPT_DIR/rootfs/etc/systemd/user-services/$service" ]]; then
-            error "Missing user service file: $service"
-            return 1
-        fi
-    done
-    
-    info "✓ All user service files verified in rootfs"
+    info "✓ All systemd service files verified in rootfs"
 }
 
 # =============================================================================
@@ -788,7 +749,7 @@ create_systemd_scripts() {
     info "Verifying systemd helper scripts in rootfs..."
     
     # Verify all helper scripts exist in rootfs
-    local scripts=("init-nginx.sh" "init-selkies-config.sh" "init-video.sh" "svc-de.sh")
+    local scripts=("init-nginx.sh" "init-selkies-config.sh" "init-video.sh" "svc-de.sh" "setup-user-systemd.sh")
     
     for script in "${scripts[@]}"; do
         if [[ ! -f "$SCRIPT_DIR/rootfs/etc/selkies/$script" ]]; then
@@ -881,30 +842,6 @@ main() {
     info "Copying rootfs files to system..."
     copy_rootfs "$SCRIPT_DIR/rootfs"
     
-    # Install user service files to appbox user directory
-    info "Installing user service files..."
-    if [[ -d "$SCRIPT_DIR/rootfs/etc/systemd/user-services" ]]; then
-        mkdir -p "/home/appbox/.config/systemd/user"
-        cp "$SCRIPT_DIR/rootfs/etc/systemd/user-services/"* "/home/appbox/.config/systemd/user/"
-        chown -R appbox:appbox "/home/appbox/.config"
-        info "✓ User service files installed"
-        
-        # Enable user services now that they're installed
-        info "Enabling desktop user services..."
-        export XDG_RUNTIME_DIR="/run/user/$(id -u appbox)"
-        
-        if sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user daemon-reload; then
-            sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-pulseaudio.service
-            sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies.service
-            info "✓ Desktop user services enabled"
-        else
-            warn "Could not enable user services immediately - they will be available after reboot"
-        fi
-    else
-        error "User service files not found in rootfs"
-        return 1
-    fi
-    
     # Create /config directory and set permissions
     mkdir -p /config
     chown appbox:appbox /config
@@ -920,13 +857,11 @@ main() {
     systemctl stop nginx 2>/dev/null || true
     systemctl disable nginx 2>/dev/null || true
     
-    # Enable system infrastructure services
-    info "Enabling system infrastructure services..."
-    enable_service "selkies-setup"  # Device setup (system service)
-    enable_service "selkies-desktop"  # Main desktop service (starts user services)
-    
-    # Note: selkies, selkies-pulseaudio are user services and enabled above
-    # selkies-nginx, xvfb are dependency services started automatically
+    # Enable systemd services (only top-level services with WantedBy directives)
+    info "Enabling systemd services..."
+    enable_service "selkies-setup"
+    enable_service "selkies"
+    enable_service "selkies-desktop"
     
     # Note: xvfb, selkies-pulseaudio, and selkies-nginx services
     # are started automatically by dependency chains and should not be enabled directly
@@ -939,42 +874,21 @@ main() {
     # Cleanup
     cleanup_installation
     
-    # Verify desktop environment setup
-    info "Verifying desktop environment setup..."
-    sleep 2  # Give systemd a moment to start
-    if sudo -u appbox XDG_RUNTIME_DIR="/run/user/$(id -u appbox)" systemctl --user status >/dev/null 2>&1; then
-        info "✓ Desktop session services are ready"
-    else
-        warn "Desktop session may need manual activation after reboot"
-        info "The desktop will initialize when you start the selkies-desktop service"
-    fi
-    
-    info "✅ Selkies Desktop Environment installation completed successfully!"
-    info ""
-    info "🖥️  DESKTOP ENVIRONMENT READY"
-    info "This is a full desktop environment accessible via web browser."
-    info ""
-    info "System infrastructure services:"
+    info "✅ Selkies installation completed successfully!"
+    info "Services enabled:"
     info "  - selkies-setup.service (Device and permission setup)"
+    info "  - selkies.service (Main selkies process)"
+    info "  - selkies-desktop.service (Desktop environment)"
+    info ""
+    info "Dependency services (started automatically):"
     info "  - xvfb.service (Virtual display server)"
+    info "  - selkies-pulseaudio.service (Audio server)"
     info "  - selkies-nginx.service (Web server)"
     info "  - docker.service (System Docker daemon)"
     info ""
-    info "Desktop session services (user services):"
-    info "  - selkies-pulseaudio.service (Desktop audio)"
-    info "  - selkies.service (Desktop streaming)"
-    info "  - selkies-desktop.service (Desktop environment)"
-    info ""
-    info "🚀 TO START YOUR DESKTOP:"
-    info "  systemctl start selkies-desktop    # Start the desktop environment"
-    info ""
-    info "🔍 TO CHECK DESKTOP STATUS:"
-    info "  systemctl status selkies-desktop   # Check if desktop is running"
-    info "  sudo -u appbox systemctl --user status selkies  # Check desktop services"
-    info ""
-    info "🌐 ACCESS YOUR DESKTOP:"
-    info "  Open your web browser and go to: https://localhost:443"
-    info "  You'll have a full Ubuntu desktop with audio, video, and applications!"
+    info "To start all services: systemctl start selkies-desktop"
+    info "To check status: systemctl status selkies"
+    info "Web interface will be available at: https://localhost:443"
 }
 
 # Run main installation

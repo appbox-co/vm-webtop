@@ -1,0 +1,35 @@
+[Unit]
+Description=Selkies GStreamer Remote Desktop
+After=selkies-nginx.service selkies-setup.service
+Requires=selkies-nginx.service selkies-setup.service
+
+[Service]
+Type=simple
+User=appbox
+Group=appbox
+Environment=HOME=/config
+Environment=DISPLAY=:1
+Environment=GST_DEBUG=*:1
+Environment=SELKIES_ENCODER=x264enc
+Environment=SELKIES_FRAMERATE=60
+Environment=SELKIES_ENABLE_RESIZE=true
+Environment=DISPLAY_SIZEW=1024
+Environment=DISPLAY_SIZEH=768
+Environment=DISPLAY_REFRESH=60
+Environment=DISPLAY_DPI=96
+Environment=DISPLAY_CDEPTH=24
+Environment=SELKIES_INTERPOSER=/usr/lib/selkies_joystick_interposer.so
+Environment=LD_PRELOAD=/usr/lib/selkies_joystick_interposer.so:/opt/lib/libudev.so.1.0.0-fake
+Environment=PULSE_SERVER=unix:/defaults/native
+Environment=TITLE=Selkies
+Environment=DEV_MODE=
+ExecStartPre=/bin/bash /etc/selkies/init-selkies-config.sh
+ExecStartPre=/bin/bash -c 'until xdpyinfo -display :1 >/dev/null 2>&1; do echo "Waiting for X server..."; sleep 1; done'
+ExecStart=/bin/bash -c 'rm -rf "${HOME}/.cache/gstreamer-1.0"; exec selkies'
+WorkingDirectory=/config
+Restart=always
+RestartSec=5
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target 

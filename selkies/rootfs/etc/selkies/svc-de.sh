@@ -3,6 +3,10 @@
 # Desktop environment startup script
 # This script runs as user appbox and starts the desktop environment
 
+# Set up user systemd environment
+echo "Setting up user systemd environment..."
+/etc/selkies/setup-user-systemd.sh
+
 # wait for X server to be ready
 echo "Waiting for X server to be ready..."
 until xdpyinfo -display :1 >/dev/null 2>&1; do

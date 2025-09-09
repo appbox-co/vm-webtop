@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# User systemd environment setup
+# This ensures users have proper access to systemd --user
+
+# Only set up for the appbox user
+if [[ "$USER" == "appbox" ]] || [[ "$LOGNAME" == "appbox" ]]; then
+    # Set XDG_RUNTIME_DIR if not already set
+    if [[ -z "$XDG_RUNTIME_DIR" ]]; then
+        export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    fi
+    
+    # Ensure the directory exists
+    if [[ ! -d "$XDG_RUNTIME_DIR" ]]; then
+        mkdir -p "$XDG_RUNTIME_DIR" 2>/dev/null || true
+        chmod 700 "$XDG_RUNTIME_DIR" 2>/dev/null || true
+    fi
+    
+    # Set up systemd user environment
+    export SYSTEMD_USER_RUNTIME_DIR="$XDG_RUNTIME_DIR/systemd"
+fi

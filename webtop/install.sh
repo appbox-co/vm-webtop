@@ -38,27 +38,9 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; }
 check_dependencies() {
     info "Checking dependencies..."
     
-    # Check if selkies is installed by checking for required system services
-    local required_services=("selkies-setup.service" "selkies-desktop.service" "selkies-nginx.service" "xvfb.service")
-    
-    for service in "${required_services[@]}"; do
-        if [[ ! -f "/etc/systemd/system/$service" ]]; then
-            error "Selkies base framework not found. Please install selkies first."
-            error "Missing required system service: $service"
-            exit 1
-        fi
-    done
-    
-    # Check if the selkies command is available
-    if ! command -v selkies >/dev/null 2>&1; then
-        error "Selkies command not found. Please ensure selkies installation completed successfully."
-        exit 1
-    fi
-    
-    # Check if user services exist for appbox user
-    if [[ ! -f "/home/appbox/.config/systemd/user/selkies.service" ]] || [[ ! -f "/home/appbox/.config/systemd/user/selkies-pulseaudio.service" ]]; then
-        error "Selkies user services not found. Please ensure selkies installation completed successfully."
-        error "Expected user services in /home/appbox/.config/systemd/user/"
+    # Check if selkies is installed by checking for selkies systemd service
+    if [[ ! -f /etc/systemd/system/selkies.service ]]; then
+        error "Selkies base framework not found. Please install selkies first."
         exit 1
     fi
     
@@ -225,15 +207,21 @@ configure_environment() {
 # =============================================================================
 
 integrate_with_selkies() {
-    info "Integrating webtop with selkies desktop environment..."
+    info "Integrating webtop with selkies desktop service..."
+    
+    # Check if selkies desktop service exists
+    if [[ ! -f /etc/systemd/system/selkies-desktop.service ]]; then
+        error "selkies-desktop.service not found. Please install selkies first."
+        exit 1
+    fi
     
     # Create a flag file to indicate webtop is installed
-    # The selkies desktop service will automatically detect and use XFCE
-    # configuration when this flag file exists
     touch /etc/selkies/webtop-installed
     
-    info "✓ Webtop integrated with selkies desktop environment"
-    info "The desktop will automatically use XFCE when started"
+    # The selkies desktop service will automatically detect and use webtop
+    # configuration if this flag file exists
+    
+    success "✓ Webtop integrated with selkies"
 }
 
 # =============================================================================
