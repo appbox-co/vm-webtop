@@ -751,19 +751,33 @@ setup_configuration_files() {
 # =============================================================================
 
 create_systemd_services() {
-    info "Verifying systemd services in rootfs..."
+    info "Verifying system services in rootfs..."
     
-    # Verify all systemd service files exist in rootfs
-    local services=("selkies-setup.service" "xvfb.service" "selkies-pulseaudio.service" "selkies-nginx.service" "selkies.service" "selkies-desktop.service")
+    # Verify system service files exist in rootfs
+    # Note: selkies-pulseaudio.service and selkies.service are now user services
+    local system_services=("selkies-setup.service" "xvfb.service" "selkies-nginx.service" "selkies-desktop.service")
     
-    for service in "${services[@]}"; do
+    for service in "${system_services[@]}"; do
         if [[ ! -f "$SCRIPT_DIR/rootfs/etc/systemd/system/$service" ]]; then
-            error "Missing systemd service file: $service"
+            error "Missing system service file: $service"
             return 1
         fi
     done
     
-    info "✓ All systemd service files verified in rootfs"
+    info "✓ All system service files verified in rootfs"
+    
+    # Verify user service files exist in rootfs
+    info "Verifying user services in rootfs..."
+    local user_services=("selkies-pulseaudio.service" "selkies.service" "selkies-desktop.service")
+    
+    for service in "${user_services[@]}"; do
+        if [[ ! -f "$SCRIPT_DIR/rootfs/etc/systemd/user-services/$service" ]]; then
+            error "Missing user service file: $service"
+            return 1
+        fi
+    done
+    
+    info "✓ All user service files verified in rootfs"
 }
 
 # =============================================================================
