@@ -578,8 +578,7 @@ setup_users() {
         useradd -m -s /bin/bash appbox
     fi
     
-    # Set password and groups
-    echo "appbox:appbox" | chpasswd
+    # Set groups, don't set password
     usermod -s /bin/bash appbox
     usermod -aG sudo appbox
     
@@ -598,7 +597,24 @@ setup_users() {
     
     # Ensure user systemd directories exist
     mkdir -p /home/appbox/.config/systemd/user
+    mkdir -p /home/appbox/.bashrc.d
     chown -R appbox:appbox /home/appbox/.config
+    
+    # Copy user systemd bashrc setup if it exists
+    if [[ -f /etc/skel/.bashrc.d/user-systemd.bashrc ]]; then
+        cp /etc/skel/.bashrc.d/user-systemd.bashrc /home/appbox/.bashrc.d/
+        chown appbox:appbox /home/appbox/.bashrc.d/user-systemd.bashrc
+        
+        # Ensure it's sourced from .bashrc
+        if ! grep -q "source.*bashrc.d" /home/appbox/.bashrc 2>/dev/null; then
+            echo '' >> /home/appbox/.bashrc
+            echo '# Source additional bashrc files' >> /home/appbox/.bashrc
+            echo 'for f in ~/.bashrc.d/*.bashrc; do' >> /home/appbox/.bashrc
+            echo '    [ -f "$f" ] && source "$f"' >> /home/appbox/.bashrc
+            echo 'done' >> /home/appbox/.bashrc
+            chown appbox:appbox /home/appbox/.bashrc
+        fi
+    fi
     
     # Enable systemd-logind for proper user sessions
     systemctl enable systemd-logind

@@ -16,6 +16,11 @@ if [[ "$USER" == "appbox" ]] || [[ "$LOGNAME" == "appbox" ]]; then
         chmod 700 "$XDG_RUNTIME_DIR" 2>/dev/null || true
     fi
     
+    # Set DBUS session bus address if not set and socket exists
+    if [[ -z "$DBUS_SESSION_BUS_ADDRESS" ]] && [[ -S "${XDG_RUNTIME_DIR}/bus" ]]; then
+        export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+    fi
+    
     # Set up systemd user environment
     export SYSTEMD_USER_RUNTIME_DIR="$XDG_RUNTIME_DIR/systemd"
 fi

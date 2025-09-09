@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Terminal wrapper to ensure proper environment for user systemd
+
+# Set up user systemd environment variables
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+
+# Also ensure these are set for consistency
+export SYSTEMD_USER_RUNTIME_DIR="$XDG_RUNTIME_DIR/systemd"
+export XDG_SESSION_ID="$(cat /proc/self/sessionid 2>/dev/null || echo $$)"
+export XDG_SESSION_TYPE="x11"
+export XDG_SESSION_CLASS="user"
+
+# Launch the terminal
+if command -v xfce4-terminal >/dev/null 2>&1; then
+    exec xfce4-terminal "$@"
+elif command -v xterm >/dev/null 2>&1; then
+    exec xterm "$@"
+elif command -v st >/dev/null 2>&1; then
+    exec st "$@"
+else
+    echo "No terminal emulator found!"
+    exit 1
+fi

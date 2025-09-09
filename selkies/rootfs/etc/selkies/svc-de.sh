@@ -5,6 +5,8 @@
 
 # Set up user systemd environment
 echo "Setting up user systemd environment..."
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
 /etc/selkies/setup-user-systemd.sh
 
 # wait for X server to be ready
@@ -67,6 +69,10 @@ chmod 777 /tmp/selkies* 2>/dev/null || true
 echo "Setting PulseAudio environment..."
 export PULSE_SERVER=unix:/defaults/native
 export PULSE_RUNTIME_PATH=/defaults
+
+# Ensure user systemd environment is available for all desktop applications
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
 
 # Set sane resolution before starting apps with better error handling
 echo "Configuring display resolution..."
