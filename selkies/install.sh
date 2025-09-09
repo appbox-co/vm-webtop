@@ -610,32 +610,15 @@ setup_users() {
     # For desktop environments, we MUST have user systemd working
     info "Setting up desktop session with user systemd..."
     
-    # Enable user systemd properly for desktop environment
+    # Enable systemd-logind for proper user sessions
+    systemctl enable systemd-logind
+    
+    # Test if user systemd can work
     if sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user daemon-reload 2>/dev/null; then
-        info "✓ User systemd is working - enabling desktop services..."
-        sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-pulseaudio.service
-        sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies.service
-        sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-desktop.service
+        info "✓ User systemd is working - desktop services will be enabled after installation"
     else
-        error "User systemd is required for desktop environment!"
-        info "Installing and configuring user session support..."
-        
-        # Force setup user systemd for desktop
-        systemctl enable systemd-logind
-        
-        # Create a proper user session
-        sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemd --user --daemon
-        sleep 3
-        
-        # Try again
-        if sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user daemon-reload 2>/dev/null; then
-            info "✓ User systemd now working - enabling desktop services..."
-            sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-pulseaudio.service
-            sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies.service
-            sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-desktop.service
-        else
-            error "Failed to set up user systemd - desktop environment may not work properly"
-        fi
+        warn "User systemd not immediately available - will be configured after service installation"
+        info "Desktop services will be enabled after user service files are installed"
     fi
     
     # Start user systemd session if not already running
@@ -883,6 +866,31 @@ main() {
     # Copy rootfs to system
     info "Copying rootfs files to system..."
     copy_rootfs "$SCRIPT_DIR/rootfs"
+    
+    # Install user service files to appbox user directory
+    info "Installing user service files..."
+    if [[ -d "$SCRIPT_DIR/rootfs/etc/systemd/user-services" ]]; then
+        mkdir -p "/home/appbox/.config/systemd/user"
+        cp "$SCRIPT_DIR/rootfs/etc/systemd/user-services/"* "/home/appbox/.config/systemd/user/"
+        chown -R appbox:appbox "/home/appbox/.config"
+        info "✓ User service files installed"
+        
+        # Enable user services now that they're installed
+        info "Enabling desktop user services..."
+        export XDG_RUNTIME_DIR="/run/user/$(id -u appbox)"
+        
+        if sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user daemon-reload; then
+            sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-pulseaudio.service
+            sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies.service
+            sudo -u appbox XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable selkies-desktop.service
+            info "✓ Desktop user services enabled"
+        else
+            warn "Could not enable user services immediately - they will be available after reboot"
+        fi
+    else
+        error "User service files not found in rootfs"
+        return 1
+    fi
     
     # Create /config directory and set permissions
     mkdir -p /config
