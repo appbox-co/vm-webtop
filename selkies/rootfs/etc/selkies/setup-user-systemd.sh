@@ -36,6 +36,18 @@ sudo -u "$USER_NAME" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user mask pu
 # Test user systemd functionality
 if sudo -u "$USER_NAME" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user daemon-reload 2>/dev/null; then
     echo "✓ User systemd is working for $USER_NAME"
+        
+        # Refresh snap desktop integration
+        if [[ -d "/var/lib/snapd/desktop/applications" ]]; then
+            echo "Refreshing snap desktop integration..."
+            update-desktop-database /var/lib/snapd/desktop/applications/ 2>/dev/null || true
+        fi
 else
     echo "⚠ User systemd may need additional setup for $USER_NAME"
+    fi
+    
+    # Always try to refresh snap desktop integration
+    if [[ -d "/var/lib/snapd/desktop/applications" ]]; then
+        echo "Refreshing snap desktop integration..."
+        update-desktop-database /var/lib/snapd/desktop/applications/ 2>/dev/null || true
 fi

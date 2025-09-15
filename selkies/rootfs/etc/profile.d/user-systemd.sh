@@ -35,9 +35,14 @@ if [[ "$USER" == "appbox" ]] || [[ "$LOGNAME" == "appbox" ]]; then
         fi
     fi
     
-    # Add Snap directories to XDG_DATA_DIRS for desktop integration
+    # Add Snap directories for desktop integration
     if [[ -d "/snap/bin" ]]; then
         export PATH="$PATH:/snap/bin"
+    fi
+    
+    # Add snap desktop files to XDG_DATA_DIRS
+    if [[ -d "/var/lib/snapd/desktop" ]]; then
+        export XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:/var/lib/snapd/desktop"
     fi
     
     # Set up IBUS for snap applications

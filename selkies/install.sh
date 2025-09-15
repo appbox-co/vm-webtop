@@ -651,6 +651,13 @@ setup_users() {
         mkdir -p /home/appbox/snap/snap-store/common/.cache
         chown -R appbox:appbox /home/appbox/snap
         
+        # Ensure snap desktop integration
+        # Snap applications create their own desktop files in /var/lib/snapd/desktop/applications/
+        # and symlink them to /snap/bin/ - we need to ensure these are accessible
+        
+        # Update desktop database to include snap applications
+        update-desktop-database /usr/share/applications/ 2>/dev/null || true
+        
         info "snap-store installed and configured"
     fi
     
