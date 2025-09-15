@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Cleanup conflicting user services after desktop startup
+# This script runs after systemd --user is properly started within the D-Bus session
+
+echo "Cleaning up conflicting user services..."
+
+# Wait for systemd --user to be fully ready
+for i in {1..30}; do
+    if systemctl --user status >/dev/null 2>&1; then
+        echo "✓ User systemd is ready"
+        break
+    fi
+    echo "Waiting for user systemd... ($i/30)"
+    sleep 1
+done
+
+# Disable and mask conflicting PulseAudio services
+echo "Disabling user PulseAudio services..."
+systemctl --user disable pulseaudio.service pulseaudio.socket 2>/dev/null || true
+systemctl --user mask pulseaudio.service pulseaudio.socket 2>/dev/null || true
+systemctl --user stop pulseaudio.service pulseaudio.socket 2>/dev/null || true
+
+echo "✓ User service cleanup completed"

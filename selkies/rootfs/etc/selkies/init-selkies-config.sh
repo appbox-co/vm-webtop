@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Enable error handling and logging
+set -e
+exec > >(tee -a /tmp/init-selkies-config.log) 2>&1
+echo "$(date): Starting selkies configuration setup..."
+
 # default file copies first run
 if [[ ! -f /config/.config/openbox/autostart ]]; then
   mkdir -p /config/.config/openbox
@@ -49,10 +54,23 @@ elif ! diff -q /proot-apps/pversion ${HOME}/.local/bin/pversion > /dev/null; the
   chown appbox:appbox ${HOME}/.local/bin/{ncat,proot-apps,proot,jq,pversion}
 fi
 
-# Wait for device setup to complete
-while [[ ! -f /tmp/selkies_js.log ]]; do
+# Wait for device setup to complete (with timeout)
+echo "Waiting for device setup to complete..."
+TIMEOUT=30
+COUNTER=0
+while [[ ! -f /tmp/selkies_js.log ]] && [[ $COUNTER -lt $TIMEOUT ]]; do
   sleep 0.1
+  COUNTER=$((COUNTER + 1))
 done
+
+if [[ ! -f /tmp/selkies_js.log ]]; then
+  echo "Warning: Device setup did not complete within ${TIMEOUT} seconds, creating log file manually"
+  touch /tmp/selkies_js.log
+  chmod 666 /tmp/selkies_js.log
+  chown appbox:appbox /tmp/selkies_js.log 2>/dev/null || true
+else
+  echo "Device setup completed successfully"
+fi
 
 # Manifest creation
 echo "{
@@ -74,4 +92,6 @@ echo "{
 }" > /usr/share/selkies/www/manifest.json
 
 # Create PID file for audio setup
-echo $$ > /defaults/pid 
+echo $$ > /defaults/pid
+
+echo "$(date): Selkies configuration setup completed successfully" 
