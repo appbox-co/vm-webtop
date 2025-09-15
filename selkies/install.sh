@@ -649,8 +649,6 @@ setup_users() {
         
         # Create necessary directories for appbox user
         mkdir -p /home/appbox/snap/snap-store/common/.cache
-        mkdir -p /home/appbox/snap/snap-store/current/.config/ibus/bus
-        mkdir -p /home/appbox/snap/snap-store/current/.local/share/snap-store
         chown -R appbox:appbox /home/appbox/snap
         
         info "snap-store installed and configured"
