@@ -1,23 +1,23 @@
 [Unit]
 Description=Desktop Environment for Selkies
-After=selkies.service selkies-setup.service
+After=selkies.service selkies-setup.service user@1000.service
 Requires=selkies.service selkies-setup.service
+Wants=user@1000.service
 
 [Service]
 Type=simple
 User=appbox
 Group=appbox
+PAMName=login
 Environment=HOME=/config
 Environment=DISPLAY=:1
-Environment=LC_ALL=
 Environment=NO_DECOR=
 Environment=NO_FULL=
 Environment=NO_GAMEPAD=
-Environment=XDG_DATA_DIRS=/var/lib/snapd/desktop:/var/lib/flatpak/exports/share:/home/appbox/.local/share/flatpak/exports/share:/usr/local/share:/usr/share
-Environment=XDG_RUNTIME_DIR=/run/user/1000
-Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
 Environment=XDG_SESSION_TYPE=x11
 Environment=XDG_SESSION_CLASS=user
+Environment=XDG_SESSION_DESKTOP=XFCE
+Environment=XDG_DATA_DIRS=/var/lib/snapd/desktop:/var/lib/flatpak/exports/share:/home/appbox/.local/share/flatpak/exports/share:/usr/local/share:/usr/share
 ExecStartPre=/bin/bash -c 'until xdpyinfo -display :1 >/dev/null 2>&1; do echo "Waiting for X server..."; sleep 1; done'
 ExecStart=/bin/bash /etc/selkies/svc-de.sh
 WorkingDirectory=/config

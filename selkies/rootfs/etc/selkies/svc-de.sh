@@ -5,8 +5,8 @@
 
 # Set up user systemd environment
 echo "Setting up user systemd environment..."
+# Don't export D-Bus variables here - they will be set by XFCE's dbus-launch
 export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
 /etc/selkies/setup-user-systemd.sh
 
 # wait for X server to be ready
@@ -67,12 +67,18 @@ chmod 777 /tmp/selkies* 2>/dev/null || true
 
 # Set PulseAudio environment variables for desktop applications
 echo "Setting PulseAudio environment..."
-export PULSE_SERVER=unix:/defaults/native
-export PULSE_RUNTIME_PATH=/defaults
+export PULSE_SERVER=unix:/run/user/1000/pulse/native
+export PULSE_RUNTIME_PATH=/run/user/1000/pulse
+# Also keep the legacy socket for compatibility
+export PULSE_SERVER_LEGACY=unix:/defaults/native
 
-# Ensure user systemd environment is available for all desktop applications
-export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+# Use the D-Bus session from systemd --user
+if [ -S "${XDG_RUNTIME_DIR}/bus" ]; then
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+    echo "Using systemd --user D-Bus session"
+else
+    echo "Warning: systemd --user D-Bus socket not found"
+fi
 
 # Set sane resolution before starting apps with better error handling
 echo "Configuring display resolution..."

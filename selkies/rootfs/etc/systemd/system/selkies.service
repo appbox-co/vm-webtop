@@ -20,7 +20,7 @@ Environment=DISPLAY_DPI=96
 Environment=DISPLAY_CDEPTH=24
 Environment=SELKIES_INTERPOSER=/usr/lib/selkies_joystick_interposer.so
 Environment=LD_PRELOAD=/usr/lib/selkies_joystick_interposer.so:/opt/lib/libudev.so.1.0.0-fake
-Environment=PULSE_SERVER=unix:/defaults/native
+Environment=PULSE_SERVER=unix:/run/user/1000/pulse/native
 Environment=TITLE=Selkies
 Environment=DEV_MODE=
 ExecStartPre=/bin/bash /etc/selkies/init-selkies-config.sh

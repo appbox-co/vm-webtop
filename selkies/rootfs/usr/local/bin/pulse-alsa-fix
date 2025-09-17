@@ -1,0 +1,34 @@
+#!/bin/bash
+# Low-latency audio stream to force sink latency down
+# This mimics what pavucontrol does to maintain low latency
+
+# Redirect output to avoid spam
+exec >/dev/null 2>&1
+
+# Set environment
+export PULSE_SERVER="${PULSE_SERVER:-unix:/run/user/1000/pulse/native}"
+
+# Function to create low-latency streams that force sink reconfiguration
+create_low_latency_streams() {
+    # Create a low-latency recording stream from output.monitor
+    # The key parameters: --latency-msec=40 forces low latency
+    parec --device=output.monitor \
+          --format=float32le \
+          --rate=25 \
+          --channels=1 \
+          --latency-msec=40 \
+          --client-name="Latency Controller" \
+          --stream-name="Peak detect" \
+          /dev/null &
+          
+    # Keep the script running
+    wait
+}
+
+# Start low-latency streams
+while true; do
+    create_low_latency_streams || {
+        echo "Latency controller failed, restarting in 5 seconds..." >&2
+        sleep 5
+    }
+done

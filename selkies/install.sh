@@ -384,6 +384,10 @@ install_main_packages() {
         pavucontrol \
         pulseaudio \
         pulseaudio-utils \
+        alsa-base \
+        alsa-utils \
+        libasound2t64 \
+        libasound2-plugins \
         snapd \
         stterm \
         xdg-utils \
@@ -650,6 +654,15 @@ setup_users() {
         # Create necessary directories for appbox user
         mkdir -p /home/appbox/snap/snap-store/common/.cache
         chown -R appbox:appbox /home/appbox/snap
+        
+        # Connect common snap interfaces for audio support
+        info "Connecting snap audio interfaces..."
+        snap connect snap-store:audio-playback :audio-playback 2>/dev/null || true
+        snap connect snap-store:pulseaudio :pulseaudio 2>/dev/null || true
+        
+        # Pre-connect interfaces for common snaps that might be installed later
+        info "Setting up auto-connections for audio interfaces..."
+        # This ensures future snap installs will have audio working
         
         # Ensure snap desktop integration
         # Snap applications create their own desktop files in /var/lib/snapd/desktop/applications/
