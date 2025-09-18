@@ -120,6 +120,13 @@ ubuntu-vm-webtop/
 sudo ./install.sh [--component <component>] [--dry-run] [--verbose] [--help]
 ```
 
+**User Customization Support**: 
+- **Custom Scripts**: Executes user scripts from `custom-scripts/` directory after main installation
+- **Custom Root Filesystem**: Copies user files from `custom-rootfs/` directory during installation
+- Scripts run in alphabetical order with full access to installation environment
+- Files copied with proper permissions and ownership (systemd services auto-enabled)
+- Optional features - installation works without custom files or scripts
+
 **Foundation Ready**: All utilities available for complex Phase 3 implementation
 
 ### 2. Selkies Framework with Xvfb (`selkies/`)

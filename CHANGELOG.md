@@ -2,7 +2,7 @@
 
 ## Project Status: 100% COMPLETE (Phase 5 of 5) - FINAL RELEASE
 
-### 🎉 FINAL RELEASE: Complete Multimedia Integration (September 2025)
+### 🎉 FINAL RELEASE: Complete Multimedia Integration + Custom Scripts (September 2025)
 
 #### Major Achievements Completed:
 - **✅ Audio Stuttering Resolution**: Implemented `pulse-alsa-fix` script that simulates pavucontrol behavior, maintaining 40ms latency instead of 2000ms, completely eliminating stuttering in all applications including Spotify snap
@@ -12,6 +12,8 @@
 - **✅ Application Store Support**: Both Snap Store and Flatpak applications appear in XFCE desktop menu automatically
 - **✅ Audio Pipeline Optimization**: Dual PulseAudio socket configuration for both legacy Selkies and modern snap compatibility
 - **✅ Desktop Environment Polish**: Fork bomb fixes, terminal/browser wrapper improvements, and seamless application launching
+- **✅ Custom Scripts Support**: Added `custom-scripts/` directory for user-provided installation scripts executed in alphabetical order
+- **✅ Custom Root Filesystem**: Added `custom-rootfs/` directory for user files copied to system with proper permissions and systemd service auto-enablement
 
 #### Technical Implementation Details:
 - **Audio Fix**: `pulse-alsa-fix` creates 25Hz peak detection streams with `--latency-msec=40` to force low-latency operation
@@ -19,6 +21,13 @@
 - **User Session**: PAM-based XDG_RUNTIME_DIR creation, systemd --user startup, proper D-Bus session management
 - **Application Launching**: Fixed exo-open recursion, chromium wrapper improvements, terminal wrapper for proper environment
 - **Desktop Integration**: XDG_DATA_DIRS configuration, desktop database updates, menu refresh automation
+
+#### New Features in Final Release:
+- **Custom Scripts Directory**: `custom-scripts/` with `README.md` and `.gitignore` integration
+- **Custom Root Filesystem**: `custom-rootfs/` directory for user files with automatic permission handling
+- **Installation Enhancement**: `execute_custom_scripts()` and `copy_custom_rootfs()` functions in main `install.sh`
+- **User Extensibility**: Alphabetical script execution and filesystem mirroring with full environment access
+- **Systemd Integration**: Custom systemd services automatically enabled during installation
 
 #### Files Modified in Final Release:
 - `selkies/rootfs/usr/local/bin/pulse-alsa-fix` - Audio stuttering fix (replaces complex attempts)

@@ -183,6 +183,8 @@ The project has a simplified structure for easy maintenance:
 
 - **Master Script**: `install.sh` - Contains shared utilities and orchestrates component installation
 - **Component Folders**: Each contains exactly three items
+- **Custom Scripts**: `custom-scripts/` - Optional user-provided scripts executed after main installation
+- **Custom Root Filesystem**: `custom-rootfs/` - Optional user files copied to system during installation
 
 ### Component Structure
 
@@ -207,6 +209,52 @@ Each component folder must contain exactly three items:
    - Explains systemd service conversions from s6
    - Notes any VM-specific adaptations required
    - Provides troubleshooting information for component
+
+### Custom Scripts Directory
+
+The `custom-scripts/` directory allows users to add their own installation scripts:
+
+- **Purpose**: Execute additional setup after main installation completes
+- **Execution Order**: Scripts run in alphabetical order (use prefixes like `01-`, `02-`)
+- **Requirements**: Scripts must be executable (`chmod +x script.sh`)
+- **Environment**: Full access to installation functions and completed system setup
+- **Git Ignored**: Directory contents ignored except `README.md`
+- **Optional**: Installation works without any custom scripts
+
+**Example Usage:**
+```bash
+# Add custom scripts
+cp my-setup.sh custom-scripts/01-my-setup.sh
+chmod +x custom-scripts/01-my-setup.sh
+
+# Add custom files
+mkdir -p custom-rootfs/usr/local/bin
+cp my-tool.sh custom-rootfs/usr/local/bin/
+
+# Run installation (custom files and scripts applied automatically)
+./install.sh
+```
+
+### Custom Root Filesystem Directory
+
+The `custom-rootfs/` directory allows users to add their own system files:
+
+- **Purpose**: Copy custom files to system during installation (like component rootfs directories)
+- **Structure**: Mirrors target filesystem (`custom-rootfs/etc/` → `/etc/`, `custom-rootfs/usr/` → `/usr/`)
+- **Permissions**: Automatic permission setting for scripts, services, and user files
+- **Systemd Integration**: Custom services automatically enabled
+- **User Files**: Files in `/home/appbox/` automatically owned by appbox user
+- **Git Ignored**: Directory contents ignored except `README.md`
+- **Optional**: Installation works without any custom files
+
+**Example Structure:**
+```
+custom-rootfs/
+├── etc/systemd/system/my-service.service
+├── usr/local/bin/my-script.sh
+├── usr/share/applications/my-app.desktop
+└── home/appbox/.config/my-app/config.json
+```
 
 ### Component Installation Process
 

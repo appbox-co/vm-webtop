@@ -677,6 +677,166 @@ install_all_components() {
     fi
 }
 
+copy_custom_rootfs() {
+    local custom_rootfs_dir="$SCRIPT_DIR/custom-rootfs"
+    
+    # Check if custom-rootfs directory exists
+    if [[ ! -d "$custom_rootfs_dir" ]]; then
+        debug "No custom-rootfs directory found, skipping custom rootfs copy"
+        return 0
+    fi
+    
+    # Check if directory has any files (excluding README.md)
+    local file_count=$(find "$custom_rootfs_dir" -type f ! -name "README.md" | wc -l)
+    if [[ $file_count -eq 0 ]]; then
+        info "No custom rootfs files found in $custom_rootfs_dir"
+        return 0
+    fi
+    
+    info "Found $file_count custom rootfs file(s) to copy"
+    
+    if [[ "$DRY_RUN" == true ]]; then
+        info "[DRY RUN] Would copy custom rootfs files from $custom_rootfs_dir to system root"
+        find "$custom_rootfs_dir" -type f ! -name "README.md" | while read -r file; do
+            local relative_path="${file#$custom_rootfs_dir/}"
+            info "[DRY RUN]   $relative_path -> /$relative_path"
+        done
+        return 0
+    fi
+    
+    # Copy files recursively, preserving structure
+    info "Copying custom rootfs files to system..."
+    
+    # Use rsync for better control over the copy process
+    if command -v rsync >/dev/null 2>&1; then
+        rsync -av --exclude="README.md" "$custom_rootfs_dir/" / || {
+            error "Failed to copy custom rootfs files using rsync"
+            return 1
+        }
+    else
+        # Fallback to cp if rsync not available
+        find "$custom_rootfs_dir" -type f ! -name "README.md" | while read -r file; do
+            local relative_path="${file#$custom_rootfs_dir/}"
+            local target_path="/$relative_path"
+            local target_dir=$(dirname "$target_path")
+            
+            # Create target directory if it doesn't exist
+            mkdir -p "$target_dir"
+            
+            # Copy the file
+            cp "$file" "$target_path" || {
+                error "Failed to copy $file to $target_path"
+                return 1
+            }
+            
+            debug "Copied: $relative_path"
+        done
+    fi
+    
+    # Set proper permissions for common file types
+    info "Setting permissions for custom rootfs files..."
+    
+    # Make scripts in /usr/local/bin executable
+    if [[ -d "/usr/local/bin" ]]; then
+        find "/usr/local/bin" -type f -name "*" -exec chmod 755 {} \; 2>/dev/null || true
+    fi
+    
+    # Set proper permissions for systemd service files
+    if [[ -d "/etc/systemd/system" ]]; then
+        find "/etc/systemd/system" -name "*.service" -exec chmod 644 {} \; 2>/dev/null || true
+        find "/etc/systemd/system" -name "*.target" -exec chmod 644 {} \; 2>/dev/null || true
+        find "/etc/systemd/system" -name "*.timer" -exec chmod 644 {} \; 2>/dev/null || true
+    fi
+    
+    # Set ownership for appbox user files
+    if [[ -d "/home/appbox" ]] && id appbox >/dev/null 2>&1; then
+        chown -R appbox:appbox /home/appbox/ 2>/dev/null || true
+    fi
+    
+    # Enable any custom systemd services
+    local custom_services=()
+    if [[ -d "$custom_rootfs_dir/etc/systemd/system" ]]; then
+        while IFS= read -r -d '' service_file; do
+            local service_name=$(basename "$service_file")
+            if [[ "$service_name" == *.service ]]; then
+                custom_services+=("$service_name")
+            fi
+        done < <(find "$custom_rootfs_dir/etc/systemd/system" -name "*.service" -print0 2>/dev/null)
+    fi
+    
+    if [[ ${#custom_services[@]} -gt 0 ]]; then
+        info "Enabling ${#custom_services[@]} custom systemd service(s)..."
+        systemctl daemon-reload
+        
+        for service in "${custom_services[@]}"; do
+            info "Enabling custom service: $service"
+            systemctl enable "$service" || warn "Failed to enable $service"
+        done
+    fi
+    
+    success "✓ Custom rootfs files copied and configured successfully"
+    return 0
+}
+
+execute_custom_scripts() {
+    local custom_scripts_dir="$SCRIPT_DIR/custom-scripts"
+    
+    # Check if custom-scripts directory exists
+    if [[ ! -d "$custom_scripts_dir" ]]; then
+        debug "No custom-scripts directory found, skipping custom scripts"
+        return 0
+    fi
+    
+    # Find all executable scripts (excluding README.md)
+    local scripts=()
+    while IFS= read -r -d '' script; do
+        scripts+=("$script")
+    done < <(find "$custom_scripts_dir" -maxdepth 1 -type f -executable ! -name "README.md" -print0 | sort -z)
+    
+    # If no scripts found, return
+    if [[ ${#scripts[@]} -eq 0 ]]; then
+        info "No custom scripts found in $custom_scripts_dir"
+        return 0
+    fi
+    
+    info "Found ${#scripts[@]} custom script(s) to execute"
+    
+    # Execute scripts in alphabetical order
+    local failed_scripts=()
+    for script in "${scripts[@]}"; do
+        local script_name=$(basename "$script")
+        info "Executing custom script: $script_name"
+        
+        if [[ "$DRY_RUN" == true ]]; then
+            info "[DRY RUN] Would execute: $script"
+            continue
+        fi
+        
+        # Execute script and capture exit code
+        set +e
+        "$script"
+        local script_exit_code=$?
+        set -e
+        
+        if [[ $script_exit_code -eq 0 ]]; then
+            success "✓ Custom script $script_name completed successfully"
+        else
+            error "✗ Custom script $script_name failed (exit code: $script_exit_code)"
+            failed_scripts+=("$script_name")
+        fi
+    done
+    
+    # Report results
+    if [[ ${#failed_scripts[@]} -eq 0 ]]; then
+        info "✓ All custom scripts executed successfully"
+        return 0
+    else
+        error "Some custom scripts failed: ${failed_scripts[*]}"
+        error "Installation will continue, but custom scripts had issues"
+        return 1
+    fi
+}
+
 cleanup() {
     info "Performing cleanup..."
     
@@ -802,6 +962,12 @@ main() {
             exit 1
         fi
     fi
+    
+    # Copy custom rootfs files if any exist
+    copy_custom_rootfs
+    
+    # Execute custom scripts if any exist
+    execute_custom_scripts
     
     # Cleanup
     cleanup
