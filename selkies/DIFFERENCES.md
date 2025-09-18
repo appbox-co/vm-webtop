@@ -9,6 +9,13 @@ This document outlines the differences between the original `docker-baseimage-se
 - **Selkies Commit**: Updated from `e1adbd8c5213fcc00b56d05337cf62d5701b2ed7` to `6cbd7f04cdf88a4cf90dbdbc398407746718e33d`
 - **Alpine Base**: Updated from `3.21` to `3.22` for frontend extraction
 
+### Major Enhancements Beyond Original
+- **Audio Stuttering Fix**: Implemented `pulse-alsa-fix` to eliminate audio stuttering in all applications
+- **Snap Store Integration**: Full snap application support with desktop menu integration
+- **Flatpak Integration**: Complete Flatpak support with permissions and desktop integration
+- **User Systemd Integration**: Proper systemd --user session management with D-Bus integration
+- **Application Store Support**: Both Snap Store and Flatpak appear in desktop menu automatically
+
 ### 1. Init System Conversion
 - **Original**: Uses s6-overlay for service management
 - **VM Implementation**: Uses systemd services
@@ -183,4 +190,54 @@ This document outlines the differences between the original `docker-baseimage-se
 - Docker-in-Docker functionality
 - Joystick and gamepad support
 
-This implementation maintains full compatibility with the original docker-baseimage-selkies while adapting it for systemd-based VM environments. 
+## 🎵 Audio and Application Integration Enhancements
+
+### Audio Stuttering Resolution
+- **Problem**: ALSA applications (especially snaps) experienced audio stuttering due to PulseAudio null sink timing issues
+- **Solution**: `pulse-alsa-fix` script creates 25Hz peak detection streams with 40ms latency (simulates pavucontrol behavior)
+- **Implementation**: `/usr/local/bin/pulse-alsa-fix` runs continuously, maintaining low-latency audio pipeline
+- **Result**: Eliminated stuttering in all applications including Spotify snap, Discord, and other audio applications
+
+### Snap Store Integration
+- **Package Installation**: Added `snapd`, `ibus` packages for full snap support
+- **PolicyKit Rules**: `/etc/polkit-1/rules.d/50-snap-appbox.rules` grants appbox user snap management permissions
+- **Desktop Integration**: XDG_DATA_DIRS includes `/var/lib/snapd/desktop` for menu entries
+- **Audio Support**: Dual PulseAudio socket configuration (`/run/user/1000/pulse/native` and `/defaults/native`)
+- **ALSA Configuration**: `/etc/asound.conf` routes all ALSA audio through PulseAudio for snap compatibility
+
+### Flatpak Integration
+- **Remote Setup**: Flathub remote configured automatically during installation
+- **PolicyKit Rules**: `/etc/polkit-1/rules.d/50-flatpak-appbox.rules` grants appbox user Flatpak permissions
+- **Desktop Integration**: XDG_DATA_DIRS includes Flatpak export directories for menu entries
+- **Directory Setup**: Proper `/var/lib/flatpak/exports/share` and user-specific directories created
+
+### User Systemd Integration
+- **Session Management**: PAM-based XDG_RUNTIME_DIR creation and systemd --user startup
+- **D-Bus Integration**: `dbus-run-session` ensures proper D-Bus session for desktop applications
+- **Environment Variables**: XDG_SESSION_TYPE, XDG_SESSION_CLASS, XDG_DATA_DIRS properly configured
+- **Service Dependencies**: `selkies-desktop.service` uses `PAMName=login` for proper session setup
+- **User Services**: Conflicting PulseAudio user services disabled to prevent interference
+
+### Desktop Environment Polish
+- **Terminal Wrapper**: `/usr/local/bin/terminal-wrapper` ensures proper environment for terminal launches
+- **Application Launching**: Fixed exo-open recursion issues with terminal and browser launching
+- **Menu Integration**: Automatic desktop database updates for all application stores
+- **Fork Bomb Prevention**: Resolved infinite recursion in application wrapper scripts
+
+### Enhanced Audio Pipeline
+- **Dual Socket Support**: PulseAudio accessible via both legacy and modern paths
+- **Low Latency Configuration**: 40ms latency maintained through continuous peak detection
+- **ALSA Plugin Integration**: All ALSA applications automatically route through PulseAudio
+- **Snap Audio Support**: Special configuration for confined snap applications
+- **Client Configuration**: `/etc/pulse/client.conf` optimized for multi-application access
+
+## Project Status
+
+This implementation not only maintains full compatibility with the original docker-baseimage-selkies but significantly enhances it with:
+- ✅ Complete application store integration (Snap Store + Flatpak)
+- ✅ Resolved audio stuttering issues affecting all applications
+- ✅ Proper user systemd and D-Bus session management
+- ✅ Enhanced desktop environment with seamless application launching
+- ✅ Production-ready multimedia support for all application types
+
+**The VM implementation now exceeds the original Docker container's capabilities while maintaining full compatibility.** 
