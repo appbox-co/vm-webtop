@@ -171,6 +171,7 @@ The project has been successfully implemented with a comprehensive approach:
 
 ### Production Ready Features
 - **Complete Installation**: All components fully implemented and tested
+- **Kernel Management**: Critical update to linux-image-generic-6.14 to fix virtiofs execv() bug in kernels < 6.11
 - **Comprehensive Testing**: 5 test categories with automated validation
 - **Diagnostic Tools**: Extensive troubleshooting and diagnostic utilities
 - **Documentation**: Complete deployment and testing guides
@@ -274,10 +275,13 @@ cd component/
 The master installation script provides shared functionality:
 
 ```bash
-sudo ./install.sh
+sudo ./install.sh [--skip-kernel-update] [--component <name>] [--dry-run] [--verbose]
 # This will:
+# - Update kernel to linux-image-generic-6.14 to fix virtiofs execv() bug (unless --skip-kernel-update)
 # - Validate system requirements (Ubuntu Noble)
-# - Install components in dependency order: xvfb → selkies → webtop
+# - Install components in dependency order: selkies → webtop
+# - Copy custom-rootfs files if present
+# - Execute custom-scripts if present
 # - Provide shared utilities for systemd, user, and configuration management
 # - Handle progress reporting and error handling
 ```

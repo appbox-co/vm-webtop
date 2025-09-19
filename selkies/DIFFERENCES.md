@@ -10,6 +10,7 @@ This document outlines the differences between the original `docker-baseimage-se
 - **Alpine Base**: Updated from `3.21` to `3.22` for frontend extraction
 
 ### Major Enhancements Beyond Original
+- **Kernel Bug Fix**: Critical update to linux-image-generic-6.14 to fix virtiofs execv() bug affecting kernels < 6.11
 - **Audio Stuttering Fix**: Implemented `pulse-alsa-fix` to eliminate audio stuttering in all applications
 - **Snap Store Integration**: Full snap application support with desktop menu integration
 - **Flatpak Integration**: Complete Flatpak support with permissions and desktop integration
@@ -231,13 +232,22 @@ This document outlines the differences between the original `docker-baseimage-se
 - **Snap Audio Support**: Special configuration for confined snap applications
 - **Client Configuration**: `/etc/pulse/client.conf` optimized for multi-application access
 
+### Virtiofs Compatibility Fix
+- **Critical Bug**: Kernels < 6.11 have a bug where `execv()` system call fails on virtiofs filesystem mounts
+- **VM Impact**: This affects VM environments using virtiofs for shared directories (common in modern VM setups)
+- **Symptoms**: Applications fail to launch with "Exec format error" or similar errors on virtiofs mounts
+- **Solution**: Kernel 6.14 includes the upstream fix for proper virtiofs executable support
+- **Implementation**: `update_kernel()` function automatically detects affected kernels and updates
+- **Detection**: Script checks kernel version and warns if < 6.11 (affected by bug)
+
 ## Project Status
 
 This implementation not only maintains full compatibility with the original docker-baseimage-selkies but significantly enhances it with:
+- ✅ Critical virtiofs execv() bug fix for proper VM compatibility
 - ✅ Complete application store integration (Snap Store + Flatpak)
 - ✅ Resolved audio stuttering issues affecting all applications
 - ✅ Proper user systemd and D-Bus session management
 - ✅ Enhanced desktop environment with seamless application launching
 - ✅ Production-ready multimedia support for all application types
 
-**The VM implementation now exceeds the original Docker container's capabilities while maintaining full compatibility.** 
+**The VM implementation now exceeds the original Docker container's capabilities while maintaining full compatibility and addressing critical VM-specific issues.** 

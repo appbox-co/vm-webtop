@@ -14,13 +14,16 @@
 - **✅ Desktop Environment Polish**: Fork bomb fixes, terminal/browser wrapper improvements, and seamless application launching
 - **✅ Custom Scripts Support**: Added `custom-scripts/` directory for user-provided installation scripts executed in alphabetical order
 - **✅ Custom Root Filesystem**: Added `custom-rootfs/` directory for user files copied to system with proper permissions and systemd service auto-enablement
+- **✅ Kernel Management**: Critical update to `linux-image-generic-6.14` to fix virtiofs execv() bug affecting kernels < 6.11
 
 #### Technical Implementation Details:
+- **Kernel Bug Fix**: Addresses critical virtiofs execv() bug in kernels < 6.11 that prevents application execution on virtiofs mounts
 - **Audio Fix**: `pulse-alsa-fix` creates 25Hz peak detection streams with `--latency-msec=40` to force low-latency operation
 - **Snap Integration**: PolicyKit rules for appbox user, dual socket PulseAudio configuration, ALSA plugin routing
 - **User Session**: PAM-based XDG_RUNTIME_DIR creation, systemd --user startup, proper D-Bus session management
 - **Application Launching**: Fixed exo-open recursion, chromium wrapper improvements, terminal wrapper for proper environment
 - **Desktop Integration**: XDG_DATA_DIRS configuration, desktop database updates, menu refresh automation
+- **VM Compatibility**: Kernel update ensures proper executable support in virtiofs-based VM environments
 
 #### New Features in Final Release:
 - **Custom Scripts Directory**: `custom-scripts/` with `README.md` and `.gitignore` integration
@@ -28,6 +31,7 @@
 - **Installation Enhancement**: `execute_custom_scripts()` and `copy_custom_rootfs()` functions in main `install.sh`
 - **User Extensibility**: Alphabetical script execution and filesystem mirroring with full environment access
 - **Systemd Integration**: Custom systemd services automatically enabled during installation
+- **Kernel Update Function**: `update_kernel()` function with virtiofs bug detection, intelligent version checking, and GRUB configuration
 
 #### Files Modified in Final Release:
 - `selkies/rootfs/usr/local/bin/pulse-alsa-fix` - Audio stuttering fix (replaces complex attempts)

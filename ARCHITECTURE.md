@@ -117,8 +117,16 @@ ubuntu-vm-webtop/
 
 **Usage**:
 ```bash
-sudo ./install.sh [--component <component>] [--dry-run] [--verbose] [--help]
+sudo ./install.sh [--component <component>] [--dry-run] [--verbose] [--skip-kernel-update] [--help]
 ```
+
+**Kernel Management**: 
+- **Critical Bug Fix**: Updates to `linux-image-generic-6.14` to resolve virtiofs execv() bug
+- **Technical Details**: Kernels < 6.11 have a bug where `execv()` system call fails on virtiofs mounts
+- **VM Impact**: This bug prevents applications from launching properly in virtiofs-based VM environments
+- **Solution**: Kernel 6.14 includes the fix for proper virtiofs executable support
+- Use `--skip-kernel-update` to disable (not recommended for virtiofs environments)
+- System reboot required if kernel is updated
 
 **User Customization Support**: 
 - **Custom Scripts**: Executes user scripts from `custom-scripts/` directory after main installation

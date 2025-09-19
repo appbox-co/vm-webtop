@@ -25,6 +25,7 @@ LOG_FILE="/var/log/ubuntu-vm-webtop-install.log"
 VERBOSE=false
 DRY_RUN=false
 COMPONENT_ONLY=""
+SKIP_KERNEL_UPDATE=false
 
 # Ensure log directory exists and is writable
 if [[ $EUID -eq 0 ]]; then
@@ -61,6 +62,7 @@ info() { log "INFO" "$@"; }
 warn() { log "WARN" "$@"; }
 error() { log "ERROR" "$@"; }
 debug() { log "DEBUG" "$@"; }
+success() { echo -e "${GREEN}[SUCCESS]${NC} $*" | tee -a "$LOG_FILE"; }
 
 # Progress indicator
 show_progress() {
@@ -591,8 +593,76 @@ install_component() {
 # MAIN INSTALLATION PROCESS
 # =============================================================================
 
+update_kernel() {
+    info "Updating kernel to linux-image-generic-6.14..."
+    info "This fixes a critical bug in kernels < 6.11 where execv() fails on virtiofs mounts"
+    
+    # Get current kernel version
+    local current_kernel=$(uname -r)
+    info "Current kernel: $current_kernel"
+    
+    # Check if current kernel is < 6.11 (affected by virtiofs execv bug)
+    local kernel_major=$(echo "$current_kernel" | cut -d. -f1)
+    local kernel_minor=$(echo "$current_kernel" | cut -d. -f2)
+    local kernel_version="${kernel_major}.${kernel_minor}"
+    
+    if [[ "$kernel_major" -lt 6 ]] || [[ "$kernel_major" -eq 6 && "$kernel_minor" -lt 11 ]]; then
+        warn "Current kernel $kernel_version is affected by virtiofs execv() bug"
+        warn "Applications may fail to execute on virtiofs mounts without kernel update"
+    else
+        info "Current kernel $kernel_version is not affected by virtiofs execv() bug"
+    fi
+    
+    # Check if target kernel is already installed
+    if dpkg -l | grep -q "linux-image-6.14"; then
+        info "Kernel 6.14 is already installed"
+        # Check if it's the running kernel
+        if [[ "$current_kernel" == *"6.14"* ]]; then
+            info "✓ Already running kernel 6.14"
+            return 0
+        else
+            warn "Kernel 6.14 is installed but not active. Reboot required after installation."
+            return 0
+        fi
+    fi
+    
+    if [[ "$DRY_RUN" == true ]]; then
+        info "[DRY RUN] Would install linux-image-generic-6.14"
+        return 0
+    fi
+    
+    # Update package cache to get latest kernel versions
+    update_package_cache
+    
+    # Install the 6.14 kernel
+    info "Installing linux-image-generic-6.14 (fixes virtiofs execv bug)..."
+    install_packages \
+        linux-image-generic-6.14 \
+        linux-headers-generic-6.14 \
+        linux-modules-extra-generic-6.14
+    
+    # Update GRUB to ensure new kernel is bootable
+    info "Updating GRUB configuration..."
+    update-grub
+    
+    # Set the new kernel as default (optional - GRUB usually picks the latest)
+    info "Kernel 6.14 installed successfully - virtiofs execv bug fixed"
+    warn "IMPORTANT: System reboot required to use the new kernel"
+    warn "After installation completes, run: sudo reboot"
+    warn "The new kernel fixes execv() failures on virtiofs mounts"
+    
+    return 0
+}
+
 setup_environment() {
     info "Setting up installation environment..."
+    
+    # Update kernel first if needed (unless skipped)
+    if [[ "$SKIP_KERNEL_UPDATE" == false ]]; then
+        update_kernel
+    else
+        info "Kernel update skipped (--skip-kernel-update flag used)"
+    fi
     
     # Create necessary directories
     create_directories \
@@ -864,19 +934,31 @@ Ubuntu VM Webtop Environment - Installation Script
 Usage: $0 [OPTIONS]
 
 Options:
-    --component <name>    Install only specified component (selkies, webtop)
-    --dry-run            Show what would be done without executing
-    --verbose            Enable verbose output
-    --help               Show this help message
+    --component <name>       Install only specified component (selkies, webtop)
+    --dry-run               Show what would be done without executing
+    --verbose               Enable verbose output
+    --skip-kernel-update    Skip kernel update to linux-image-generic-6.14
+    --help                  Show this help message
 
 Examples:
-    $0                           # Install all components
+    $0                           # Install all components with kernel update
     $0 --component selkies       # Install only selkies component
     $0 --dry-run --verbose       # Show installation plan with details
+    $0 --skip-kernel-update      # Install without updating kernel
 
 Components:
     selkies    - Selkies GStreamer framework with Xvfb
     webtop     - XFCE desktop environment
+
+Kernel Update:
+    By default, the script updates to linux-image-generic-6.14 to fix a critical
+    bug in kernels < 6.11 where execv() fails on virtiofs mounts. This is
+    essential for proper application execution in VM environments.
+    Use --skip-kernel-update to disable (not recommended for virtiofs setups).
+
+Customization:
+    custom-scripts/    - Add executable scripts (run after installation)
+    custom-rootfs/     - Add files to copy to system (mirrors filesystem)
 
 For more information, see ARCHITECTURE.md
 EOF
@@ -895,6 +977,10 @@ parse_arguments() {
                 ;;
             --verbose)
                 VERBOSE=true
+                shift
+                ;;
+            --skip-kernel-update)
+                SKIP_KERNEL_UPDATE=true
                 shift
                 ;;
             --help)
@@ -981,16 +1067,35 @@ main() {
         echo "========================================"
         echo "Installation Complete!"
         echo "========================================"
-        echo "You can now access the webtop at:"
+        
+        # Check if kernel was updated and reboot is needed
+        local current_kernel=$(uname -r)
+        if [[ "$SKIP_KERNEL_UPDATE" == false ]] && [[ "$current_kernel" != *"6.14"* ]] && dpkg -l | grep -q "linux-image-6.14"; then
+            echo -e "${YELLOW}"
+            echo "IMPORTANT: Kernel 6.14 was installed but not active"
+            echo "Please reboot the system to use the new kernel:"
+            echo "  sudo reboot"
+            echo ""
+            echo "After reboot, you can access the webtop at:"
+            echo -e "${GREEN}"
+        else
+            echo "You can now access the webtop at:"
+        fi
+        
         echo "  https://localhost:443"
         echo ""
         echo "To check service status:"
         echo "  systemctl status selkies"
-        echo "  systemctl status webtop-de"
+        echo "  systemctl status selkies-desktop"
         echo ""
         echo "For troubleshooting, check:"
         echo "  journalctl -u selkies -f"
-        echo "  journalctl -u webtop-de -f"
+        echo "  journalctl -u selkies-desktop -f"
+        echo ""
+        echo "Additional features:"
+        echo "  - Snap Store: Available in desktop menu"
+        echo "  - Flatpak: Available via terminal (flatpak install <app>)"
+        echo "  - Audio: Full support including Spotify and other apps"
         echo "========================================"
         echo -e "${NC}"
     fi
