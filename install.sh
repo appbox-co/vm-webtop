@@ -636,10 +636,31 @@ update_kernel() {
     
     # Install the 6.14 kernel
     info "Installing linux-image-generic-6.14 (fixes virtiofs execv bug)..."
+    
+    # First update package cache to get latest versions
+    update_package_cache
+    
+    # Install kernel packages (using meta-packages that pull latest 6.14)
     install_packages \
         linux-image-generic-6.14 \
-        linux-headers-generic-6.14 \
-        linux-modules-extra-generic-6.14
+        linux-headers-generic-6.14
+    
+    # Get the specific 6.14 kernel version that was installed
+    local kernel_version=$(apt-cache policy linux-image-generic-6.14 | grep Installed | awk '{print $2}' | cut -d: -f2)
+    if [[ -n "$kernel_version" ]]; then
+        # Extract the specific version (e.g., 6.14.0-29)
+        local specific_version=$(echo "$kernel_version" | cut -d. -f1-3 | sed 's/~.*$//')
+        info "Installing modules-extra for kernel version: $specific_version"
+        
+        # Try to install the specific modules-extra package
+        if apt-cache search "linux-modules-extra-${specific_version}-generic" | grep -q "linux-modules-extra-${specific_version}-generic"; then
+            install_packages "linux-modules-extra-${specific_version}-generic"
+        else
+            warn "Modules-extra package for $specific_version not found, skipping"
+        fi
+    else
+        warn "Could not determine installed kernel version for modules-extra"
+    fi
     
     # Update GRUB to ensure new kernel is bootable
     info "Updating GRUB configuration..."
