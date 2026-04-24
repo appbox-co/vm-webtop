@@ -6,7 +6,7 @@
     <value type="int" value="1"/>
     <value type="int" value="2"/>
     <property name="dark-mode" type="bool" value="true"/>
-    <!-- Top bar: menu + workspace + tray (no Docklike here). p=6 = top edge. -->
+    <!-- Top bar: menu + workspace + tray (no Docklike). p=6 = top edge. -->
     <property name="panel-1" type="empty">
       <property name="position" type="string" value="p=6;x=0;y=0"/>
       <property name="length" type="uint" value="100"/>
@@ -26,17 +26,20 @@
         <value type="int" value="14"/>
       </property>
     </property>
-    <!-- Bottom dock: Docklike centered between expanding separators. p=10 = bottom center (horizontal). -->
+    <!--
+      Bottom Docklike strip: still the XFCE panel (not Plank). Use a tiny base
+      length + length-adjust so the panel grows only to fit icons — looks like
+      a dock, not a full-width bar. p=10 = bottom center.
+    -->
     <property name="panel-2" type="empty">
       <property name="position" type="string" value="p=10;x=0;y=0"/>
-      <property name="length" type="uint" value="100"/>
+      <property name="length" type="uint" value="1"/>
+      <property name="length-adjust" type="bool" value="true"/>
       <property name="position-locked" type="bool" value="true"/>
-      <property name="icon-size" type="uint" value="32"/>
-      <property name="size" type="uint" value="48"/>
+      <property name="icon-size" type="uint" value="48"/>
+      <property name="size" type="uint" value="52"/>
       <property name="plugin-ids" type="array">
-        <value type="int" value="15"/>
         <value type="int" value="16"/>
-        <value type="int" value="17"/>
       </property>
     </property>
   </property>
@@ -65,14 +68,6 @@
       <property name="style" type="uint" value="0"/>
     </property>
     <property name="plugin-14" type="string" value="actions"/>
-    <property name="plugin-15" type="string" value="separator">
-      <property name="expand" type="bool" value="true"/>
-      <property name="style" type="uint" value="0"/>
-    </property>
     <property name="plugin-16" type="string" value="docklike"/>
-    <property name="plugin-17" type="string" value="separator">
-      <property name="expand" type="bool" value="true"/>
-      <property name="style" type="uint" value="0"/>
-    </property>
   </property>
 </channel>
