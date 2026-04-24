@@ -181,7 +181,7 @@ install_rootfs_files() {
     cp -r "$SCRIPT_DIR/rootfs/defaults" /
     chown -R appbox:appbox /defaults
     
-    # System default Docklike pinned apps (Snap Store / App Center), used until the
+    # System default Docklike pinned apps (Thunar / Terminal / Chromium), used until the
     # per-plugin ~/.config/xfce4/panel/docklike-*.rc is created.
     if [[ -f "$SCRIPT_DIR/rootfs/etc/xdg/xfce4/panel/docklike.rc" ]]; then
         install -d /etc/xdg/xfce4/panel
