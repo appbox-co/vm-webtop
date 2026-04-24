@@ -154,18 +154,32 @@ rm -f /etc/systemd/system/APPBOX_DATA.mount /etc/systemd/system/home-appbox.moun
 rm -f /etc/systemd/system/local-fs.target.wants/APPBOX_DATA.mount /etc/systemd/system/local-fs.target.wants/home-appbox.mount /etc/systemd/system/local-fs.target.wants/opt-cylo-config.mount /etc/systemd/system/local-fs.target.wants/etc-ssl-domains-*.mount 2>/dev/null || true
 rm -f /etc/systemd/system/local-fs.target.requires/APPBOX_DATA.mount /etc/systemd/system/local-fs.target.requires/home-appbox.mount /etc/systemd/system/local-fs.target.requires/opt-cylo-config.mount /etc/systemd/system/local-fs.target.requires/etc-ssl-domains-*.mount 2>/dev/null || true
 
+systemctl daemon-reload || true
+systemctl stop selkies-nginx.service 2>/dev/null || true
+systemctl stop nginx.service 2>/dev/null || true
+sleep 1
+
 # Unmount nested SSL domain mounts first; stale virtiofs mountpoints can survive
 # rm -rf and cause cert resolution to pick old/incomplete domain folders.
 if command -v findmnt >/dev/null 2>&1; then
-  for _ in $(seq 1 10); do
+  for _ in $(seq 1 25); do
+    umount -R -l /etc/ssl/domains 2>/dev/null || true
     while read -r mnt; do
       [ -n "${mnt:-}" ] || continue
       umount -l "$mnt" 2>/dev/null || true
-    done < <(findmnt -R /etc/ssl/domains -n -o TARGET 2>/dev/null | sort -r)
+    done < <(findmnt -R /etc/ssl/domains -n -o TARGET 2>/dev/null | sort -u | sort -r)
+    while read -r mnt; do
+      [ -n "${mnt:-}" ] || continue
+      [[ "$mnt" == *ssl/domains* ]] || continue
+      umount -l "$mnt" 2>/dev/null || true
+    done < <(findmnt -n -o TARGET -t virtiofs 2>/dev/null || true)
     for m in /APPBOX_DATA /opt/cylo/config /home/appbox; do
       findmnt -n "$m" >/dev/null 2>&1 && umount -l "$m" 2>/dev/null || true
     done
-    sleep 0.4
+    if ! findmnt -R /etc/ssl/domains -n -o TARGET 2>/dev/null | grep -q .; then
+      break
+    fi
+    sleep 0.5
   done
 fi
 
