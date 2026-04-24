@@ -555,8 +555,9 @@ build_selkies_from_source() {
     cp libudev.so.1.0.0-fake "$SCRIPT_DIR/rootfs/opt/lib/libudev.so.1.0.0-fake"
     
     # Frontend build (simulating the multi-stage build)
+    # Upstream: gst-web-core lives under addons/selkies-web-core (commit a1f72708+).
     info "Building frontend components..."
-    cd ../gst-web-core
+    cd ../selkies-web-core
     npm install
     npm run build
     
@@ -612,8 +613,8 @@ PY
     # Create frontend directory structure
     mkdir -p dist/src dist/nginx
     cp ../universal-touch-gamepad/universalTouchGamepad.js dist/src/
-    cp ../gst-web-core/nginx/* dist/nginx/
-    cp -r ../gst-web-core/dist/jsdb dist/
+    cp ../selkies-web-core/nginx/* dist/nginx/
+    cp -r ../selkies-web-core/dist/jsdb dist/
     
     # Copy frontend to rootfs
     mkdir -p "$SCRIPT_DIR/rootfs/usr/share/selkies/www"
