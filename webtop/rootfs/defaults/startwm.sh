@@ -7,23 +7,37 @@ if which nvidia-smi; then
   export GALLIUM_DRIVER=zink
 fi
 
-# Default settings (copy *.xml only; subdirs like panel/ are seeded below)
-if [ ! -d "${HOME}"/.config/xfce4/xfconf/xfce-perchannel-xml ]; then
-  mkdir -p "${HOME}"/.config/xfce4/xfconf/xfce-perchannel-xml
+XFCONF_DIR="${HOME}/.config/xfce4/xfconf/xfce-perchannel-xml"
+LAYOUT_REV="$(tr -d '[:space:]' </defaults/xfce/.xfce-layout-revision 2>/dev/null || echo 1)"
+CUR_REV="$(tr -d '[:space:]' <"${HOME}/.config/xfce4/.xfce-layout-revision" 2>/dev/null || echo 0)"
+
+if [ ! -d "$XFCONF_DIR" ]; then
+  mkdir -p "$XFCONF_DIR"
   for f in /defaults/xfce/*.xml; do
     [ -f "$f" ] || continue
-    cp "$f" "${HOME}"/.config/xfce4/xfconf/xfce-perchannel-xml/
+    cp "$f" "$XFCONF_DIR/"
   done
 fi
-if [ -d /defaults/xfce/panel ]; then
-  mkdir -p "${HOME}/.local/share/xfce4/panel"
-  for d in /defaults/xfce/panel/launcher-*; do
-    [ -d "$d" ] || continue
-    base=$(basename "$d")
-    if [ ! -d "${HOME}/.local/share/xfce4/panel/${base}" ]; then
+
+if [ "$CUR_REV" != "$LAYOUT_REV" ]; then
+  mkdir -p "$XFCONF_DIR"
+  if [ -f /defaults/xfce/xfce4-panel.xml ]; then
+    cp /defaults/xfce/xfce4-panel.xml "$XFCONF_DIR/xfce4-panel.xml"
+  fi
+  if [ -d /defaults/xfce/panel ]; then
+    mkdir -p "${HOME}/.local/share/xfce4/panel"
+    shopt -s nullglob
+    for d in "${HOME}/.local/share/xfce4/panel"/launcher-*; do
+      [ -d "$d" ] && rm -rf "$d"
+    done
+    shopt -u nullglob
+    for d in /defaults/xfce/panel/launcher-*; do
+      [ -d "$d" ] || continue
       cp -a "$d" "${HOME}/.local/share/xfce4/panel/"
-    fi
-  done
+    done
+  fi
+  rm -f "${HOME}/.config/xfce4/panel/docklike-"*.rc 2>/dev/null || true
+  echo "$LAYOUT_REV" > "${HOME}/.config/xfce4/.xfce-layout-revision"
 fi
 
 # Start DE
