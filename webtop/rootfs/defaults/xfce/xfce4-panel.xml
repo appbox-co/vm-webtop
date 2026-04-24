@@ -6,7 +6,7 @@
     <value type="int" value="1"/>
     <value type="int" value="2"/>
     <property name="dark-mode" type="bool" value="true"/>
-    <!-- Top bar: menu + workspace + tray (no Docklike). p=6 = top edge. -->
+    <!-- Top bar: matches main — menu, tasklist, pager, tray, clock (main uses single panel; we keep same items here). -->
     <property name="panel-1" type="empty">
       <property name="position" type="string" value="p=6;x=0;y=0"/>
       <property name="length" type="uint" value="100"/>
@@ -15,6 +15,7 @@
       <property name="size" type="uint" value="26"/>
       <property name="plugin-ids" type="array">
         <value type="int" value="1"/>
+        <value type="int" value="2"/>
         <value type="int" value="3"/>
         <value type="int" value="4"/>
         <value type="int" value="5"/>
@@ -26,11 +27,7 @@
         <value type="int" value="14"/>
       </property>
     </property>
-    <!--
-      Bottom Docklike strip: still the XFCE panel (not Plank). Use a tiny base
-      length + length-adjust so the panel grows only to fit icons — looks like
-      a dock, not a full-width bar. p=10 = bottom center.
-    -->
+    <!-- Bottom: Docklike dock strip (not on main; compact via length-adjust). p=10 = bottom center. -->
     <property name="panel-2" type="empty">
       <property name="position" type="string" value="p=10;x=0;y=0"/>
       <property name="length" type="uint" value="1"/>
@@ -45,6 +42,9 @@
   </property>
   <property name="plugins" type="empty">
     <property name="plugin-1" type="string" value="applicationsmenu"/>
+    <property name="plugin-2" type="string" value="tasklist">
+      <property name="grouping" type="uint" value="1"/>
+    </property>
     <property name="plugin-3" type="string" value="separator">
       <property name="expand" type="bool" value="true"/>
       <property name="style" type="uint" value="0"/>
