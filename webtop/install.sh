@@ -100,7 +100,6 @@ install_xfce_packages() {
     apt-get install --no-install-recommends -y \
         chromium \
         mousepad \
-        xfce4-docklike-plugin \
         xfce4-terminal \
         xfce4 \
         xubuntu-default-settings \
@@ -180,14 +179,6 @@ install_rootfs_files() {
     info "Copying XFCE configuration files..."
     cp -r "$SCRIPT_DIR/rootfs/defaults" /
     chown -R appbox:appbox /defaults
-    
-    # System default Docklike pinned apps (Thunar / Terminal / Chromium), used until the
-    # per-plugin ~/.config/xfce4/panel/docklike-*.rc is created.
-    if [[ -f "$SCRIPT_DIR/rootfs/etc/xdg/xfce4/panel/docklike.rc" ]]; then
-        install -d /etc/xdg/xfce4/panel
-        install -m 0644 "$SCRIPT_DIR/rootfs/etc/xdg/xfce4/panel/docklike.rc" \
-            /etc/xdg/xfce4/panel/docklike.rc
-    fi
     
     # Ensure webtop flag file directory exists
     mkdir -p /etc/selkies

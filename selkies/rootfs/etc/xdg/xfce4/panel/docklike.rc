@@ -1,5 +1,0 @@
-# Default Docklike pinned apps (system-wide, XDG_CONFIG_DIRS .../xfce4/panel/docklike.rc).
-# Loaded until ~/.config/xfce4/panel/docklike-*.rc exists for that panel instance.
-# Separator for multiple entries is ';' (see xfce4-docklike-plugin).
-[user]
-pinned=/usr/share/applications/thunar.desktop;/usr/share/applications/xfce4-terminal.desktop;/usr/share/applications/chromium.desktop
