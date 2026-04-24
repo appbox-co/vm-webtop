@@ -1038,9 +1038,9 @@ main() {
     chown appbox:appbox /config
     chmod 755 /config
     
-    # Create /defaults directory and copy files
+    # Create /defaults directory and copy files (including xfce/ subtree; cp * omits dirs)
     mkdir -p /defaults
-    cp "$SCRIPT_DIR/rootfs/defaults"/* /defaults/
+    cp -a "$SCRIPT_DIR/rootfs/defaults"/. /defaults/
     chown -R appbox:appbox /defaults
     
     # Disable system nginx service to prevent port conflicts with selkies-nginx
