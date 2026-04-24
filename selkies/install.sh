@@ -509,16 +509,20 @@ extract_docker_images() {
 build_selkies_from_source() {
     info "Building Selkies from source..."
     
+    # Pinned selkies-project/selkies revision (update when bumping upstream).
+    local selkies_ref="a1f72708b679f7ea7bd06af86ad71ddb1d885587"
+    
     # Download and build selkies
     local temp_dir=$(mktemp -d)
     cd "$temp_dir"
     
-    curl -o selkies.tar.gz -L "https://github.com/selkies-project/selkies/archive/f114a2332672852f7845b3543b9390edfc033787.tar.gz"
+    curl -o selkies.tar.gz -L "https://github.com/selkies-project/selkies/archive/${selkies_ref}.tar.gz"
     tar xf selkies.tar.gz
     cd selkies-*
     
     # Remove cryptography dependency
     sed -i '/cryptography/d' pyproject.toml
+    # Legacy av pin (older trees); harmless no-op when dependency is unpinned "av"
     sed -i 's/av>=14.0.0,<15.0.0/av>=16.0.0/' pyproject.toml
     
     # Create virtual environment and install selkies
