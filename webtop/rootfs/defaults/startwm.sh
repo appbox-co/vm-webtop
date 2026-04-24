@@ -7,10 +7,23 @@ if which nvidia-smi; then
   export GALLIUM_DRIVER=zink
 fi
 
-# Default settings
+# Default settings (copy *.xml only; subdirs like panel/ are seeded below)
 if [ ! -d "${HOME}"/.config/xfce4/xfconf/xfce-perchannel-xml ]; then
   mkdir -p "${HOME}"/.config/xfce4/xfconf/xfce-perchannel-xml
-  cp /defaults/xfce/* "${HOME}"/.config/xfce4/xfconf/xfce-perchannel-xml/
+  for f in /defaults/xfce/*.xml; do
+    [ -f "$f" ] || continue
+    cp "$f" "${HOME}"/.config/xfce4/xfconf/xfce-perchannel-xml/
+  done
+fi
+if [ -d /defaults/xfce/panel ]; then
+  mkdir -p "${HOME}/.local/share/xfce4/panel"
+  for d in /defaults/xfce/panel/launcher-*; do
+    [ -d "$d" ] || continue
+    base=$(basename "$d")
+    if [ ! -d "${HOME}/.local/share/xfce4/panel/${base}" ]; then
+      cp -a "$d" "${HOME}/.local/share/xfce4/panel/"
+    fi
+  done
 fi
 
 # Start DE

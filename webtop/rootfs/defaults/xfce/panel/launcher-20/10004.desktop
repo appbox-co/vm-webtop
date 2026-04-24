@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Search
+Comment=Find applications
+Exec=xfce4-appfinder
+Icon=edit-find
+Terminal=false
+Categories=Utility;
