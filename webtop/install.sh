@@ -100,6 +100,7 @@ install_xfce_packages() {
     apt-get install --no-install-recommends -y \
         chromium \
         mousepad \
+        xfce4-docklike-plugin \
         xfce4-terminal \
         xfce4 \
         xubuntu-default-settings \
