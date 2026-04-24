@@ -1,0 +1,5 @@
+# Default Docklike pinned apps (system-wide).
+# Loaded when the per-panel plugin config file does not exist yet.
+# See: xfce4-docklike-plugin Settings.cpp (GKeyFile "user"/"pinned" string list).
+[user]
+pinned=/var/lib/snapd/desktop/applications/snap-store_snap-store.desktop
