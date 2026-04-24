@@ -603,6 +603,16 @@ content = re.sub(
     content,
 )
 
+# Current selkies-dashboard minify renames identifiers (e.g. _i->kt, Pt->Ce, ba->ua).
+# Match the DPR-derived block generically so the hotfix survives new builds.
+_content, n = re.subn(
+    r'([a-zA-Z_$][a-zA-Z0-9_$]*)\("scaling_dpi",null\)===null\)\{const _=window\.devicePixelRatio\|\|1,w=Math\.round\(_\*4\)\*24,R=\[120,144,168,192,216,240,288\];([a-zA-Z_$][a-zA-Z0-9_$]*)=_>1&&R\.includes\(w\)\?w:96\}else \2=([a-zA-Z_$][a-zA-Z0-9_$]*)\("scaling_dpi",96\)',
+    r'\1("scaling_dpi",null)===null){\2=96}else \2=\3("scaling_dpi",96)',
+    content,
+)
+if n:
+    content = _content
+
 bundle.write_text(content, encoding="utf-8")
 PY
         info "Applied dashboard scaling default hotfix (96 DPI first load)"
