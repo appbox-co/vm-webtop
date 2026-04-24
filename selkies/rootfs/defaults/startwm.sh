@@ -9,40 +9,47 @@ if [ "${DISABLE_ZINK}" != "true" ] && command -v nvidia-smi >/dev/null 2>&1 && [
   export GALLIUM_DRIVER=zink
 fi
 
-# XFCE defaults: first session seeds all *.xml; bump /defaults/xfce/.xfce-layout-revision
-# when panel layout changes so existing users get xfce4-panel.xml + launchers refreshed
-# (otherwise ~/.config keeps stale Docklike / old pins forever).
-XFCONF_DIR="${HOME}/.config/xfce4/xfconf/xfce-perchannel-xml"
-LAYOUT_REV="$(tr -d '[:space:]' </defaults/xfce/.xfce-layout-revision 2>/dev/null || echo 1)"
-CUR_REV="$(tr -d '[:space:]' <"${HOME}/.config/xfce4/.xfce-layout-revision" 2>/dev/null || echo 0)"
-
-if [ ! -d "$XFCONF_DIR" ]; then
-  mkdir -p "$XFCONF_DIR"
-  for f in /defaults/xfce/*.xml; do
-    [ -f "$f" ] || continue
-    cp "$f" "$XFCONF_DIR/"
-  done
+# XFCE defaults from /defaults/xfce/: first login, or when .vm-images-xfce-revision bumps (image update).
+XfceRevSrc=/defaults/xfce/.vm-images-xfce-revision
+UserRev="${HOME}/.config/xfce4/.vm-images-xfce-revision"
+XfceConfDir="${HOME}/.config/xfce4/xfconf/xfce-perchannel-xml"
+need_sync=false
+if [ ! -d "$XfceConfDir" ]; then
+  need_sync=true
+elif [ -f "$XfceRevSrc" ]; then
+  want=$(tr -d ' \n\r\t' < "$XfceRevSrc" 2>/dev/null || echo "")
+  got=$(tr -d ' \n\r\t' < "$UserRev" 2>/dev/null || echo "")
+  [ -n "$want" ] && [ "$want" != "$got" ] && need_sync=true
 fi
 
-if [ "$CUR_REV" != "$LAYOUT_REV" ]; then
-  mkdir -p "$XFCONF_DIR"
-  if [ -f /defaults/xfce/xfce4-panel.xml ]; then
-    cp /defaults/xfce/xfce4-panel.xml "$XFCONF_DIR/xfce4-panel.xml"
-  fi
+if [ "$need_sync" = true ]; then
+  mkdir -p "$XfceConfDir"
+  for f in /defaults/xfce/*.xml; do
+    [ -f "$f" ] || continue
+    cp "$f" "$XfceConfDir/"
+  done
   if [ -d /defaults/xfce/panel ]; then
     mkdir -p "${HOME}/.local/share/xfce4/panel"
-    shopt -s nullglob
-    for d in "${HOME}/.local/share/xfce4/panel"/launcher-*; do
-      [ -d "$d" ] && rm -rf "$d"
-    done
-    shopt -u nullglob
     for d in /defaults/xfce/panel/launcher-*; do
       [ -d "$d" ] || continue
+      base=$(basename "$d")
+      rm -rf "${HOME}/.local/share/xfce4/panel/${base}"
       cp -a "$d" "${HOME}/.local/share/xfce4/panel/"
     done
   fi
-  rm -f "${HOME}/.config/xfce4/panel/docklike-"*.rc 2>/dev/null || true
-  echo "$LAYOUT_REV" > "${HOME}/.config/xfce4/.xfce-layout-revision"
+  if [ -f "$XfceRevSrc" ]; then
+    mkdir -p "${HOME}/.config/xfce4"
+    cp "$XfceRevSrc" "$UserRev"
+  fi
+elif [ -d /defaults/xfce/panel ]; then
+  mkdir -p "${HOME}/.local/share/xfce4/panel"
+  for d in /defaults/xfce/panel/launcher-*; do
+    [ -d "$d" ] || continue
+    base=$(basename "$d")
+    if [ ! -d "${HOME}/.local/share/xfce4/panel/${base}" ]; then
+      cp -a "$d" "${HOME}/.local/share/xfce4/panel/"
+    fi
+  done
 fi
 
 # Start DE
