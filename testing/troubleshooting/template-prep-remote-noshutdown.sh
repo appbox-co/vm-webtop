@@ -33,6 +33,15 @@ apt-get -y autoremove --purge
 apt-get clean
 
 echo "[3/9] Remove stale fstab and mount-unit state"
+# /home/appbox is often a virtiofs mount; unmounting drops live data (e.g. .ssh).
+# Stash authorized_keys on the rootfs before unmount so SSH still works until shutdown.
+STASH_DIR=/var/lib/vm-image-template-stash
+install -d -m 0700 "$STASH_DIR"
+rm -rf "$STASH_DIR/appbox-ssh" 2>/dev/null || true
+if [ -d /home/appbox/.ssh ]; then
+  cp -a /home/appbox/.ssh "$STASH_DIR/appbox-ssh"
+fi
+
 cp -a /etc/fstab /etc/fstab.pre-template."$(date +%Y%m%d%H%M%S)"
 sed -i '/[[:space:]]virtiofs[[:space:]]/d' /etc/fstab
 sed -i '/[[:space:]]\/etc\/ssl\/domains\//d' /etc/fstab
@@ -76,6 +85,17 @@ if find /etc/ssl/domains -mindepth 1 -print -quit | grep -q .; then
   exit 1
 fi
 
+echo "[3b/9] Placeholder TLS for sealed image (init-nginx waits for cert material)"
+# Real certs are injected via virtiofs on provisioned VMs; without this, init-nginx.sh
+# loops on sleep until SSL_WAIT_TIMEOUT_SECONDS.
+install -d -m 0755 /etc/ssl/appbox
+openssl req -x509 -nodes -newkey rsa:2048 -days 30 \
+  -subj "/CN=sealed-template.invalid" \
+  -keyout /etc/ssl/appbox/sealed-template.key \
+  -out /etc/ssl/appbox/fullchain.cer 2>/dev/null
+chmod 0644 /etc/ssl/appbox/fullchain.cer
+chmod 0600 /etc/ssl/appbox/sealed-template.key
+
 echo "[4/9] Reload and validate Selkies stack"
 systemctl daemon-reload
 systemctl reset-failed
@@ -85,6 +105,17 @@ sleep 3
 systemctl is-active selkies-nginx.service
 systemctl is-active selkies.service
 nginx -t
+
+echo "[4b/9] Restore appbox .ssh on rootfs (after virtiofs home unmount)"
+if [ -d "$STASH_DIR/appbox-ssh" ]; then
+  install -d -m 0755 /home/appbox
+  rm -rf /home/appbox/.ssh
+  cp -a "$STASH_DIR/appbox-ssh" /home/appbox/.ssh
+  chown -R appbox:appbox /home/appbox /home/appbox/.ssh
+  chmod 700 /home/appbox/.ssh
+  rm -rf "$STASH_DIR/appbox-ssh"
+fi
+rmdir "$STASH_DIR" 2>/dev/null || true
 
 echo "[5/9] Trim (bounded; don't hang template pipeline)"
 timeout 180s fstrim -av || true
