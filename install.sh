@@ -89,20 +89,31 @@ validate_system() {
     fi
     
     # Check Ubuntu version
-    if ! command -v lsb_release &> /dev/null; then
-        error "lsb_release command not found. Are you running Ubuntu?"
+    local ubuntu_version=""
+    local ubuntu_codename=""
+    
+    if command -v lsb_release &> /dev/null; then
+        ubuntu_version=$(lsb_release -rs)
+        ubuntu_codename=$(lsb_release -cs)
+    elif [[ -f /etc/os-release ]]; then
+        # shellcheck source=/dev/null
+        . /etc/os-release
+        ubuntu_version="${VERSION_ID:-}"
+        ubuntu_codename="${VERSION_CODENAME:-}"
+    else
+        error "Cannot detect OS version (missing lsb_release and /etc/os-release)"
         exit 1
     fi
     
-    local ubuntu_version=$(lsb_release -rs)
-    local ubuntu_codename=$(lsb_release -cs)
-    
-    if [[ "$ubuntu_codename" != "noble" ]]; then
-        error "This script requires Ubuntu Noble (24.04 LTS). Found: $ubuntu_version ($ubuntu_codename)"
-        exit 1
-    fi
-    
-    info "✓ Ubuntu Noble (24.04 LTS) detected"
+    case "$ubuntu_codename" in
+        noble|resolute)
+            info "✓ Ubuntu ${ubuntu_version} (${ubuntu_codename}) detected"
+            ;;
+        *)
+            error "This script supports Ubuntu 24.04 LTS (noble) or 26.04 LTS (resolute). Found: ${ubuntu_version:-unknown} (${ubuntu_codename:-unknown})"
+            exit 1
+            ;;
+    esac
     
     # Check system resources
     local mem_total=$(awk '/MemTotal/ {print int($2/1024/1024)}' /proc/meminfo)
@@ -594,8 +605,7 @@ install_component() {
 # =============================================================================
 
 update_kernel() {
-    info "Updating kernel to linux-image-generic-6.14..."
-    info "This fixes a critical bug in kernels < 6.11 where execv() fails on virtiofs mounts"
+    info "Checking kernel for virtiofs execv() fix (needs Linux >= 6.11)..."
     
     # Get current kernel version
     local current_kernel=$(uname -r)
@@ -606,12 +616,13 @@ update_kernel() {
     local kernel_minor=$(echo "$current_kernel" | cut -d. -f2)
     local kernel_version="${kernel_major}.${kernel_minor}"
     
-    if [[ "$kernel_major" -lt 6 ]] || [[ "$kernel_major" -eq 6 && "$kernel_minor" -lt 11 ]]; then
-        warn "Current kernel $kernel_version is affected by virtiofs execv() bug"
-        warn "Applications may fail to execute on virtiofs mounts without kernel update"
-    else
-        info "Current kernel $kernel_version is not affected by virtiofs execv() bug"
+    if [[ "$kernel_major" -gt 6 ]] || [[ "$kernel_major" -eq 6 && "$kernel_minor" -ge 11 ]]; then
+        info "Current kernel $kernel_version is sufficient; skipping linux-image-generic-6.14 install"
+        return 0
     fi
+    
+    warn "Current kernel $kernel_version is affected by virtiofs execv() bug"
+    warn "Installing linux-image-generic-6.14 to fix application execution on virtiofs mounts"
     
     # Check if target kernel is already installed
     if dpkg -l | grep -q "linux-image-6.14"; then
@@ -675,8 +686,25 @@ update_kernel() {
     return 0
 }
 
+configure_apt_release_verification() {
+    # Newer apt invokes gpgv inside a user-namespace sandbox (user "_apt"). On some
+    # Ubuntu 26.04 minimal / VM setups gpgv then exits with status 111 and every
+    # InRelease fails verification. Running the sandbox as root matches the
+    # installer context and restores a working apt.
+    local f="/etc/apt/apt.conf.d/01ubuntu-vm-webtop-apt-sandbox.conf"
+    if [[ ! -f "$f" ]]; then
+        info "Configuring apt sandbox for Release signature verification..."
+        mkdir -p /etc/apt/apt.conf.d
+        printf '%s\n' \
+            '// Added by ubuntu-vm-webtop install (gpgv + _apt sandbox compatibility)' \
+            'APT::Sandbox::User "root";' > "$f"
+    fi
+}
+
 setup_environment() {
     info "Setting up installation environment..."
+    
+    configure_apt_release_verification
     
     # Update kernel first if needed (unless skipped)
     if [[ "$SKIP_KERNEL_UPDATE" == false ]]; then
@@ -951,6 +979,7 @@ cleanup() {
 show_help() {
     cat << EOF
 Ubuntu VM Webtop Environment - Installation Script
+Supported: Ubuntu 24.04 LTS (noble) and 26.04 LTS (resolute).
 
 Usage: $0 [OPTIONS]
 

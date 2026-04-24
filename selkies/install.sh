@@ -76,6 +76,18 @@ install_packages() {
     fi
 }
 
+# SONAME bumps per release (e.g. libx264-164 on noble, libx264-165 on resolute)
+libx264_runtime_package() {
+    local p
+    for p in libx264-165 libx264-164 libx264-163; do
+        if apt-cache show "$p" 2>/dev/null | grep -q "^Package: $p"; then
+            echo "$p"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # File operations functions
 copy_rootfs() {
     local source_dir="$1"
@@ -241,7 +253,10 @@ install_dev_dependencies() {
     # Install temporary development dependencies
     info "Installing temporary development dependencies..."
     install_packages \
-        python3-dev
+        python3-dev \
+        libxkbcommon-dev \
+        libxkbcommon-x11-dev \
+        pkg-config
 }
 
 # =============================================================================
@@ -251,9 +266,18 @@ install_dev_dependencies() {
 setup_repositories() {
     info "Setting up Docker and Node.js repositories..."
     
+    local ubuntu_codename
+    if command -v lsb_release &>/dev/null; then
+        ubuntu_codename=$(lsb_release -cs)
+    else
+        # shellcheck source=/dev/null
+        . /etc/os-release
+        ubuntu_codename="${VERSION_CODENAME:?VERSION_CODENAME unset}"
+    fi
+    
     # Docker repository
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | tee /usr/share/keyrings/docker.asc >/dev/null
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable" > /etc/apt/sources.list.d/docker.list
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${ubuntu_codename} stable" > /etc/apt/sources.list.d/docker.list
     
     # Node.js repository
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
@@ -314,6 +338,12 @@ install_main_packages() {
     
     # Group 4: Basic X11 libraries
     info "Installing basic X11 libraries..."
+    local libx264_pkg
+    libx264_pkg=$(libx264_runtime_package) || {
+        error "No libx264-* runtime package found in apt cache"
+        return 1
+    }
+    info "Using H.264 library package: $libx264_pkg"
     install_packages \
         libatk1.0-0 \
         libatk-bridge2.0-0 \
@@ -334,7 +364,7 @@ install_main_packages() {
         libtasn1-6 \
         libvulkan1 \
         libx11-6 \
-        libx264-164 \
+        "$libx264_pkg" \
         libxau6 \
         libxcb1 \
         libxcb-icccm4 \
@@ -406,6 +436,7 @@ install_main_packages() {
         xauth \
         xcvt \
         xkb-data \
+        xclip \
         xsel \
         xterm \
         xutils \
@@ -432,15 +463,26 @@ install_main_packages() {
 extract_docker_images() {
     info "Extracting pre-built components from Docker images..."
     
+    local ubuntu_codename xvfb_tag
+    if command -v lsb_release &>/dev/null; then
+        ubuntu_codename=$(lsb_release -cs)
+    else
+        # shellcheck source=/dev/null
+        . /etc/os-release
+        ubuntu_codename="${VERSION_CODENAME:?VERSION_CODENAME unset}"
+    fi
+    # linuxserver tags: ubuntunoble, ubunturesolute, etc.
+    xvfb_tag="ubuntu${ubuntu_codename}"
+    
     # Extract Xvfb binary from xvfb image
-    info "Extracting custom Xvfb binary..."
-    pull_docker_image "lscr.io/linuxserver/xvfb:ubuntunoble"
+    info "Extracting custom Xvfb binary from lscr.io/linuxserver/xvfb:${xvfb_tag}..."
+    pull_docker_image "lscr.io/linuxserver/xvfb:${xvfb_tag}"
     
     # Create temporary directory for extraction
     local temp_dir=$(mktemp -d)
     
     # Extract Xvfb binary
-    extract_from_docker_image "lscr.io/linuxserver/xvfb:ubuntunoble" "/usr/bin/Xvfb" "$temp_dir/Xvfb"
+    extract_from_docker_image "lscr.io/linuxserver/xvfb:${xvfb_tag}" "/usr/bin/Xvfb" "$temp_dir/Xvfb"
     
     # Copy to rootfs
     mkdir -p "$SCRIPT_DIR/rootfs/usr/bin"
@@ -471,16 +513,20 @@ build_selkies_from_source() {
     local temp_dir=$(mktemp -d)
     cd "$temp_dir"
     
-    curl -o selkies.tar.gz -L "https://github.com/selkies-project/selkies/archive/4561221b16593d463df7ccb7ccb2a36dcea6ab31.tar.gz"
+    curl -o selkies.tar.gz -L "https://github.com/selkies-project/selkies/archive/f114a2332672852f7845b3543b9390edfc033787.tar.gz"
     tar xf selkies.tar.gz
     cd selkies-*
     
     # Remove cryptography dependency
     sed -i '/cryptography/d' pyproject.toml
+    sed -i 's/av>=14.0.0,<15.0.0/av>=16.0.0/' pyproject.toml
     
     # Create virtual environment and install selkies
     python3 -m venv --system-site-packages /lsiopy
     /lsiopy/bin/pip install .
+    # pixelflux 1.5.x can require newer libva symbols (e.g. vaMapBuffer2)
+    # than available on target Ubuntu images, causing capture module load failures.
+    /lsiopy/bin/pip install "pixelflux==1.4.7"
     /lsiopy/bin/pip install setuptools
     
     # Make selkies command available globally
@@ -516,6 +562,48 @@ build_selkies_from_source() {
     cd ../selkies-dashboard
     npm install
     npm run build
+
+    # Hotfix: prevent runtime ReferenceError in dashboard cleanup path when
+    # serverClipboardContent is referenced without a declaration.
+    local dashboard_bundle
+    dashboard_bundle=$(ls dist/assets/index-*.js 2>/dev/null | head -1 || true)
+    if [[ -n "$dashboard_bundle" ]]; then
+        sed -i 's/serverClipboardContent=""/window.serverClipboardContent=""/g' "$dashboard_bundle"
+        info "Applied dashboard clipboard runtime hotfix"
+
+        # Hotfix: keep UI scaling options but default first load to 100% (96 DPI)
+        # instead of auto-selecting by browser devicePixelRatio.
+        python3 - "$dashboard_bundle" <<'PY'
+import pathlib
+import re
+import sys
+
+bundle = pathlib.Path(sys.argv[1])
+content = bundle.read_text(encoding="utf-8")
+old = "(window.devicePixelRatio||1)*96"
+if old in content:
+    content = content.replace(old, "96")
+
+# Also patch the first-load localStorage initialization path that derives
+# scaling_dpi from devicePixelRatio, forcing default 96 while preserving
+# the selectable scaling_dpi options list.
+content = content.replace(
+    'const _=window.devicePixelRatio||1,T=Math.round(_*4)*24,z=[120,144,168,192,216,240,288];ba=_>1&&z.includes(T)?T:96',
+    'ba=96',
+)
+
+content = re.sub(
+    r'if\(_i\("scaling_dpi",null\)===null\)\{const _=window\.devicePixelRatio\|\|1,T=Math\.round\(_\*4\)\*24,z=\[120,144,168,192,216,240,288\];ba=_>1&&z\.includes\(T\)\?T:96\}else ba=Pt\("scaling_dpi",96\);',
+    'if(_i("scaling_dpi",null)===null){ba=96}else ba=Pt("scaling_dpi",96);',
+    content,
+)
+
+bundle.write_text(content, encoding="utf-8")
+PY
+        info "Applied dashboard scaling default hotfix (96 DPI first load)"
+    else
+        warn "Dashboard bundle not found; skipping clipboard runtime hotfix"
+    fi
     
     # Create frontend directory structure
     mkdir -p dist/src dist/nginx
@@ -872,7 +960,10 @@ cleanup_installation() {
     
     # Remove development dependencies
     apt-get purge -y --autoremove \
-        python3-dev || true
+        python3-dev \
+        libxkbcommon-dev \
+        libxkbcommon-x11-dev \
+        pkg-config || true
     
     # Clean package cache
     apt-get autoclean
@@ -894,6 +985,15 @@ cleanup_installation() {
 
 main() {
     info "Starting Selkies installation process..."
+    
+    # When selkies/install.sh is run directly (not via repo install.sh), ensure apt
+    # can verify InRelease (see install.sh configure_apt_release_verification).
+    if [[ ! -f /etc/apt/apt.conf.d/01ubuntu-vm-webtop-apt-sandbox.conf ]]; then
+        mkdir -p /etc/apt/apt.conf.d
+        printf '%s\n' \
+            '// Added by ubuntu-vm-webtop install (gpgv + _apt sandbox compatibility)' \
+            'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/01ubuntu-vm-webtop-apt-sandbox.conf
+    fi
     
     # Update TODO status
     # Phase 3 tasks

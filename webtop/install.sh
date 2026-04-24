@@ -66,13 +66,21 @@ check_dependencies() {
 setup_repositories() {
     info "Setting up repositories..."
     
-    # Add xtradeb PPA repository
-    info "Adding xtradeb PPA repository..."
-    apt-key adv \
-        --keyserver hkp://keyserver.ubuntu.com:80 \
-        --recv-keys 5301FA4FD93244FBC6F6149982BB6851C64F6880
+    local ubuntu_codename
+    if command -v lsb_release &>/dev/null; then
+        ubuntu_codename=$(lsb_release -cs)
+    else
+        # shellcheck source=/dev/null
+        . /etc/os-release
+        ubuntu_codename="${VERSION_CODENAME:?VERSION_CODENAME unset}"
+    fi
     
-    echo "deb https://ppa.launchpadcontent.net/xtradeb/apps/ubuntu noble main" > \
+    # Add xtradeb PPA repository (noble, resolute, etc.)
+    info "Adding xtradeb PPA repository for ${ubuntu_codename}..."
+    install -d /usr/share/keyrings
+    curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x5301FA4FD93244FBC6F6149982BB6851C64F6880" \
+        | gpg --dearmor -o /usr/share/keyrings/xtradeb-apps.gpg
+    echo "deb [signed-by=/usr/share/keyrings/xtradeb-apps.gpg] https://ppa.launchpadcontent.net/xtradeb/apps/ubuntu ${ubuntu_codename} main" > \
         /etc/apt/sources.list.d/xtradeb.list
     
     # Update package lists
@@ -182,19 +190,19 @@ install_rootfs_files() {
     if [[ -f /usr/bin/chromium-browser ]]; then
         cp "$SCRIPT_DIR/rootfs/usr/bin/chromium" /usr/bin/
     else
-        warn "chromium-browser not found, skipping chromium wrapper installation"
+        warning "chromium-browser not found, skipping chromium wrapper installation"
     fi
     
     if [[ -f /usr/bin/exo-open-real ]]; then
         cp "$SCRIPT_DIR/rootfs/usr/bin/exo-open" /usr/bin/
     else
-        warn "exo-open-real not found, skipping exo-open wrapper installation"
+        warning "exo-open-real not found, skipping exo-open wrapper installation"
     fi
     
     if [[ -f /usr/bin/thunar-original ]]; then
         cp "$SCRIPT_DIR/rootfs/usr/bin/thunar" /usr/bin/
     else
-        warn "thunar-original not found, skipping thunar wrapper installation"
+        warning "thunar-original not found, skipping thunar wrapper installation"
     fi
     
     cp "$SCRIPT_DIR/rootfs/usr/local/bin/wrapped-chromium" /usr/local/bin/

@@ -3,6 +3,10 @@
 # Device and permission setup script
 # This script runs as root to set up device nodes and fix permissions
 
+# Hardened/minimal images sometimes lack the sticky world-writable bit on /tmp.
+# Xvfb runs as appbox and must create lock files there.
+chmod 1777 /tmp /var/tmp 2>/dev/null || true
+
 # Create input device directory
 mkdir -pm1777 /dev/input
 
@@ -19,11 +23,12 @@ mknod /dev/input/event1003 c 13 1067 2>/dev/null || true
 # Set permissions on device nodes
 chmod 777 /dev/input/js* /dev/input/event* 2>/dev/null || true
 
-# Fix permissions on selkies web directory
-chown -R appbox:appbox /usr/share/selkies/www/ 2>/dev/null || true
+# Fix permissions on selkies web directory (only files not already owned by appbox)
+find /usr/share/selkies/www/ ! -user appbox -exec chown appbox:appbox {} + 2>/dev/null || true
 
-# Ensure config directory has proper ownership
-chown -R appbox:appbox /config 2>/dev/null || true
+# Ensure config directory top-level has proper ownership; skip deep recursion
+chown appbox:appbox /config 2>/dev/null || true
+find /config -maxdepth 1 ! -user appbox -exec chown appbox:appbox {} + 2>/dev/null || true
 
 # Create temporary files with proper permissions
 touch /tmp/selkies_js.log
