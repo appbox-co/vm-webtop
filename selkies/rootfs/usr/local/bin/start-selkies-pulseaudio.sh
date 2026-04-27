@@ -19,7 +19,6 @@ echo "$(date): Creating PulseAudio runtime directory..."
 mkdir -p /run/user/1000/pulse
 mkdir -p /defaults
 chown -R appbox:appbox /run/user/1000/pulse
-chown -R appbox:appbox /defaults
 chmod 755 /run/user/1000/pulse
 chmod 755 /defaults
 
@@ -91,7 +90,7 @@ sleep 2
 
 # Ensure proper permissions
 echo "$(date): Setting proper permissions for PulseAudio sockets..."
-chown -R appbox:appbox /run/user/1000/pulse
+chown -R appbox:appbox /run/user/1000/pulse 2>/dev/null || true
 chmod 755 /run/user/1000/pulse
 if [ -S /run/user/1000/pulse/native ]; then
     chmod 666 /run/user/1000/pulse/native

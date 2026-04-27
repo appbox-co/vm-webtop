@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Centered Appbox logo; desktop fill matches https://www.appbox.co/ dark theme
+  (--background: hsl(228 18% 7%) ≈ #0e0f15).
+  XFCE 4.20 xfdesktop: rgba1 is four doubles in 0..1 (not 16-bit ints — ints show as white).
+-->
+<channel name="xfce4-desktop" version="1.0">
+  <property name="last-settings-migration-version" type="uint" value="1"/>
+  <property name="backdrop" type="empty">
+    <property name="screen0" type="empty">
+      <property name="monitorscreen" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="color-style" type="int" value="0"/>
+          <property name="rgba1" type="array">
+            <value type="double" value="0.054902"/>
+            <value type="double" value="0.058824"/>
+            <value type="double" value="0.082353"/>
+            <value type="double" value="1"/>
+          </property>
+          <property name="image-style" type="int" value="1"/>
+          <property name="last-image" type="string" value="/defaults/xfce/wallpapers/appbox.svg"/>
+          <property name="image-show" type="bool" value="true"/>
+        </property>
+      </property>
+      <property name="monitorselkies-primary" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="color-style" type="int" value="0"/>
+          <property name="rgba1" type="array">
+            <value type="double" value="0.054902"/>
+            <value type="double" value="0.058824"/>
+            <value type="double" value="0.082353"/>
+            <value type="double" value="1"/>
+          </property>
+          <property name="image-style" type="int" value="1"/>
+          <property name="last-image" type="string" value="/defaults/xfce/wallpapers/appbox.svg"/>
+          <property name="image-show" type="bool" value="true"/>
+        </property>
+      </property>
+    </property>
+  </property>
+</channel>

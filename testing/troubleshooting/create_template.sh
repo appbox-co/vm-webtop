@@ -86,11 +86,17 @@ scp_cmd() {
 echo "==> Upload latest Selkies files to VM"
 scp_cmd \
   "${REPO_ROOT}/selkies/rootfs/etc/selkies/init-nginx.sh" \
+  "${REPO_ROOT}/selkies/rootfs/etc/selkies/init-device-setup.sh" \
   "${REPO_ROOT}/selkies/rootfs/etc/systemd/system/selkies-nginx.service" \
   "${REPO_ROOT}/selkies/rootfs/etc/systemd/system/selkies.service" \
+  "${REPO_ROOT}/selkies/rootfs/etc/systemd/system/selkies-setup.service" \
   "${REPO_ROOT}/selkies/rootfs/usr/local/bin/start-selkies-pulseaudio.sh" \
   "${REPO_ROOT}/selkies/rootfs/defaults/default.conf" \
   "${REPO_ROOT}/selkies/rootfs/defaults/startwm.sh" \
+  "${USER_NAME}@${HOST}:/tmp/"
+
+scp_cmd -r \
+  "${REPO_ROOT}/selkies/rootfs/defaults/home-appbox" \
   "${USER_NAME}@${HOST}:/tmp/"
 
 echo "==> Apply fixes + seal VM + shutdown"
@@ -101,11 +107,22 @@ export DEBIAN_FRONTEND=noninteractive
 
 echo "[1/9] Install latest runtime files"
 install -m 0755 /tmp/init-nginx.sh /etc/selkies/init-nginx.sh
+install -m 0755 /tmp/init-device-setup.sh /etc/selkies/init-device-setup.sh
 install -m 0644 /tmp/selkies-nginx.service /etc/systemd/system/selkies-nginx.service
 install -m 0644 /tmp/selkies.service /etc/systemd/system/selkies.service
+install -m 0644 /tmp/selkies-setup.service /etc/systemd/system/selkies-setup.service
 install -m 0755 /tmp/start-selkies-pulseaudio.sh /usr/local/bin/start-selkies-pulseaudio.sh
 install -m 0644 /tmp/default.conf /defaults/default.conf
 install -m 0755 /tmp/startwm.sh /defaults/startwm.sh
+systemctl daemon-reload
+
+if [ -d /tmp/home-appbox ]; then
+  install -d /defaults
+  rm -rf /defaults/home-appbox
+  cp -a /tmp/home-appbox /defaults/home-appbox
+  chown -R appbox:appbox /defaults/home-appbox
+  rm -rf /tmp/home-appbox
+fi
 
 echo "[2/9] Update package state"
 apt-get update

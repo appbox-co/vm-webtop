@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Appbox wallpaper (RandR watch)
+Comment=Keep desktop backdrop after Selkies/browser resize
+Exec=/bin/bash /defaults/xfce/set-desktop-wallpaper-watch.sh
+StartupNotify=false
+Terminal=false
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

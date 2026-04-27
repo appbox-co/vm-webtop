@@ -1,7 +1,8 @@
 [Unit]
 Description=Selkies GStreamer Remote Desktop
-After=selkies-nginx.service selkies-setup.service
-Requires=selkies-nginx.service selkies-setup.service
+After=xvfb.service selkies-setup.service
+Requires=xvfb.service
+Wants=selkies-nginx.service selkies-setup.service
 
 [Service]
 Type=simple
@@ -18,6 +19,8 @@ Environment=DISPLAY_SIZEH=768
 Environment=DISPLAY_REFRESH=60
 Environment=DISPLAY_DPI=96
 Environment=DISPLAY_CDEPTH=24
+Environment=SELKIES_USE_CSS_SCALING=true
+Environment=SELKIES_SCALING_DPI=96,120,144,168,192,216,240,264,288
 Environment=SELKIES_INTERPOSER=/usr/lib/selkies_joystick_interposer.so
 Environment=LD_PRELOAD=/usr/lib/selkies_joystick_interposer.so:/opt/lib/libudev.so.1.0.0-fake
 Environment=PULSE_SERVER=unix:/run/user/1000/pulse/native

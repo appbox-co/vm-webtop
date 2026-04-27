@@ -2,13 +2,15 @@
 Description=Selkies Device and Permission Setup
 DefaultDependencies=no
 After=local-fs.target
+# When /home/appbox is a separate mount (e.g. virtiofs), seed after it is present.
+RequiresMountsFor=/home/appbox
 Before=selkies.service selkies-desktop.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/bin/bash /etc/selkies/init-device-setup.sh
-TimeoutStartSec=30
+TimeoutStartSec=120
 
 [Install]
 WantedBy=multi-user.target 

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Appbox desktop wallpaper
+Comment=Centered Appbox logo (xfdesktop)
+Exec=/bin/bash /defaults/xfce/set-desktop-wallpaper.sh
+StartupNotify=false
+Terminal=false
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

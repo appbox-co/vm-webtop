@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=App Center
+Comment=Install and manage applications
+Exec=snap-store
+Icon=/snap/snap-store/current/bin/data/flutter_assets/assets/app-center.png
+TryExec=snap-store
+Terminal=false
+Categories=PackageManager;

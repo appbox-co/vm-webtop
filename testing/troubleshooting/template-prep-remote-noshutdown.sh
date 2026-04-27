@@ -1,19 +1,31 @@
 #!/usr/bin/env bash
 # Run ON THE GUEST as root. Mirrors create_template.sh remote steps [1]–[8]; no shutdown.
-# Expects runtime files in /tmp/: init-nginx.sh, selkies-nginx.service, selkies.service,
-# start-selkies-pulseaudio.sh, default.conf, startwm.sh, selkies-nginx (for /etc/default).
+# Expects runtime files in /tmp/: init-nginx.sh, init-device-setup.sh, selkies-nginx.service,
+# selkies.service, selkies-setup.service, start-selkies-pulseaudio.sh, default.conf, startwm.sh,
+# selkies-nginx (for /etc/default).
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 echo "[1/9] Install latest runtime files"
 install -m 0755 /tmp/init-nginx.sh /etc/selkies/init-nginx.sh
+install -m 0755 /tmp/init-device-setup.sh /etc/selkies/init-device-setup.sh
 install -m 0644 /tmp/selkies-nginx.service /etc/systemd/system/selkies-nginx.service
 install -m 0644 /tmp/selkies.service /etc/systemd/system/selkies.service
+install -m 0644 /tmp/selkies-setup.service /etc/systemd/system/selkies-setup.service
 install -m 0755 /tmp/start-selkies-pulseaudio.sh /usr/local/bin/start-selkies-pulseaudio.sh
 install -m 0644 /tmp/default.conf /defaults/default.conf
 install -m 0755 /tmp/startwm.sh /defaults/startwm.sh
 install -d /etc/default
 install -m 0644 /tmp/selkies-nginx /etc/default/selkies-nginx
+systemctl daemon-reload
+
+if [ -d /tmp/home-appbox ]; then
+  install -d /defaults
+  rm -rf /defaults/home-appbox
+  cp -a /tmp/home-appbox /defaults/home-appbox
+  chown -R appbox:appbox /defaults/home-appbox
+  rm -rf /tmp/home-appbox
+fi
 
 echo "[2/9] Update package state"
 apt-get update

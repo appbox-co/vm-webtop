@@ -39,6 +39,18 @@ chown appbox:appbox /tmp/selkies_js.log
 mkdir -p /defaults
 chown appbox:appbox /defaults
 
+# Snap user data lives under ~/snap; on fresh deploy /home/appbox may be an empty mount.
+# Ship skeleton in /defaults/home-appbox/snap (rootfs) and merge into the real home here.
+if [ -d /defaults/home-appbox/snap ]; then
+  install -d -m 0755 /home/appbox
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --ignore-existing /defaults/home-appbox/snap/ /home/appbox/snap/
+  else
+    mkdir -p /home/appbox/snap/snap-store/common/.cache
+  fi
+  chown -R appbox:appbox /home/appbox/snap 2>/dev/null || true
+fi
+
 # Video device permissions setup (moved from init-video.sh)
 echo "Setting up video device permissions..."
 
