@@ -2,8 +2,7 @@
 
 # =============================================================================
 # Webtop Installation Script
-# Installs XFCE desktop environment for LinuxServer.io webtop functionality
-# Based on docker-webtop Dockerfile
+# Installs GNOME Flashback (X11) for Selkies — full classic GNOME stack on Xvfb.
 # =============================================================================
 
 set -euo pipefail
@@ -93,19 +92,19 @@ setup_repositories() {
 # PACKAGE INSTALLATION
 # =============================================================================
 
-install_xfce_packages() {
-    info "Installing XFCE packages..."
+install_gnome_packages() {
+    info "Installing GNOME Flashback and applications..."
     
-    # Install XFCE desktop environment and related packages
     apt-get install --no-install-recommends -y \
         chromium \
         mousepad \
-        xfce4-terminal \
-        xfce4 \
-        xubuntu-default-settings \
-        xubuntu-icon-theme
+        gnome-session-flashback \
+        gnome-terminal \
+        nautilus \
+        yaru-theme-gtk \
+        yaru-theme-icon
     
-    success "✓ XFCE packages installed"
+    success "✓ GNOME desktop packages installed"
 }
 
 # =============================================================================
@@ -123,43 +122,28 @@ download_webtop_icon() {
 }
 
 # =============================================================================
-# XFCE TWEAKS
+# GNOME / CHROMIUM TWEAKS
 # =============================================================================
 
-apply_xfce_tweaks() {
-    info "Applying XFCE tweaks..."
+apply_gnome_tweaks() {
+    info "Applying GNOME and browser tweaks..."
     
-    # Modify chromium desktop entry to use wrapped chromium
-    sed -i \
-        's#^Exec=.*#Exec=/usr/local/bin/wrapped-chromium#g' \
-        /usr/share/applications/chromium.desktop
-    
-    # Move original binaries to backup names
-    if [[ -f /usr/bin/exo-open ]] && [[ ! -f /usr/bin/exo-open-real ]]; then
-        info "Moving original exo-open to exo-open-real..."
-        mv /usr/bin/exo-open /usr/bin/exo-open-real
-    elif [[ -f /usr/bin/exo-open-real ]]; then
-        info "exo-open-real already exists, skipping move"
-    fi
-    
-    if [[ -f /usr/bin/thunar ]] && [[ ! -f /usr/bin/thunar-original ]]; then
-        info "Moving original thunar to thunar-original..."
-        mv /usr/bin/thunar /usr/bin/thunar-original
-    elif [[ -f /usr/bin/thunar-original ]]; then
-        info "thunar-original already exists, skipping move"
-    fi
+    for desktop in /usr/share/applications/chromium.desktop /usr/share/applications/chromium-browser.desktop; do
+        if [[ -f "$desktop" ]]; then
+            sed -i 's#^Exec=.*#Exec=/usr/local/bin/wrapped-chromium#g' "$desktop"
+        fi
+    done
     
     if [[ -f /usr/bin/chromium ]] && [[ ! -f /usr/bin/chromium-browser ]]; then
-        info "Moving original chromium to chromium-browser..."
+        info "Renaming chromium to chromium-browser for wrapper compatibility..."
         mv /usr/bin/chromium /usr/bin/chromium-browser
     elif [[ -f /usr/bin/chromium-browser ]]; then
-        info "chromium-browser already exists, skipping move"
+        info "chromium-browser already present"
     fi
     
-    # Remove xscreensaver autostart
-    rm -f /etc/xdg/autostart/xscreensaver.desktop
+    rm -f /etc/xdg/autostart/xscreensaver.desktop 2>/dev/null || true
     
-    success "✓ XFCE tweaks applied"
+    success "✓ GNOME tweaks applied"
 }
 
 # =============================================================================
@@ -169,46 +153,28 @@ apply_xfce_tweaks() {
 install_rootfs_files() {
     info "Installing webtop rootfs files..."
     
-    # Verify rootfs structure exists
     if [[ ! -d "$SCRIPT_DIR/rootfs" ]]; then
         error "Rootfs directory not found: $SCRIPT_DIR/rootfs"
         exit 1
     fi
     
-    # Copy configuration files
-    info "Copying XFCE configuration files..."
-    cp -r "$SCRIPT_DIR/rootfs/defaults" /
+    info "Copying defaults and GNOME resources..."
+    rm -rf /defaults/xfce
+    cp -a "$SCRIPT_DIR/rootfs/defaults" /
     chown -R appbox:appbox /defaults
     
-    # Ensure webtop flag file directory exists
     mkdir -p /etc/selkies
     
-    # Copy modified binaries
-    info "Installing modified browser wrappers..."
-    
-    # Only copy wrappers if the real binaries exist (ensuring we don't overwrite them)
     if [[ -f /usr/bin/chromium-browser ]]; then
         cp "$SCRIPT_DIR/rootfs/usr/bin/chromium" /usr/bin/
+        chmod +x /usr/bin/chromium
     else
         warning "chromium-browser not found, skipping chromium wrapper installation"
     fi
     
-    if [[ -f /usr/bin/exo-open-real ]]; then
-        cp "$SCRIPT_DIR/rootfs/usr/bin/exo-open" /usr/bin/
-    else
-        warning "exo-open-real not found, skipping exo-open wrapper installation"
-    fi
-    
-    if [[ -f /usr/bin/thunar-original ]]; then
-        cp "$SCRIPT_DIR/rootfs/usr/bin/thunar" /usr/bin/
-    else
-        warning "thunar-original not found, skipping thunar wrapper installation"
-    fi
-    
     cp "$SCRIPT_DIR/rootfs/usr/local/bin/wrapped-chromium" /usr/local/bin/
+    chmod +x /usr/local/bin/wrapped-chromium
     
-    # Make scripts executable
-    chmod +x /usr/bin/chromium /usr/bin/exo-open /usr/bin/thunar /usr/local/bin/wrapped-chromium
     chmod +x /defaults/startwm.sh
     
     success "✓ Rootfs files installed"
@@ -221,15 +187,12 @@ install_rootfs_files() {
 configure_environment() {
     info "Configuring webtop environment..."
     
-    # Ensure /etc/environment ends with a newline if it exists
     if [[ -f /etc/environment ]] && [[ -n "$(tail -c1 /etc/environment)" ]]; then
         echo >> /etc/environment
     fi
     
-    # Add webtop environment variables
     cat "$SCRIPT_DIR/rootfs/etc/environment" >> /etc/environment
     
-    # Sort and remove any duplicates
     sort /etc/environment | uniq > /tmp/environment.tmp
     mv /tmp/environment.tmp /etc/environment
     
@@ -243,17 +206,12 @@ configure_environment() {
 integrate_with_selkies() {
     info "Integrating webtop with selkies desktop service..."
     
-    # Check if selkies desktop service exists
     if [[ ! -f /etc/systemd/system/selkies-desktop.service ]]; then
         error "selkies-desktop.service not found. Please install selkies first."
         exit 1
     fi
     
-    # Create a flag file to indicate webtop is installed
     touch /etc/selkies/webtop-installed
-    
-    # The selkies desktop service will automatically detect and use webtop
-    # configuration if this flag file exists
     
     success "✓ Webtop integrated with selkies"
 }
@@ -265,10 +223,8 @@ integrate_with_selkies() {
 cleanup_installation() {
     info "Cleaning up installation..."
     
-    # Clean package cache
     apt-get autoclean
     
-    # Remove temporary files
     rm -rf \
         /config/.cache \
         /config/.launchpadlib \
@@ -286,34 +242,27 @@ cleanup_installation() {
 validate_installation() {
     info "Validating webtop installation..."
     
-    # Check if XFCE packages are installed using dpkg-query
-    local xfce_packages=("xfce4" "xfce4-terminal" "chromium" "mousepad")
-    for package in "${xfce_packages[@]}"; do
+    # chromium is the xtradeb .deb; apply_gnome_tweaks moves /usr/bin/chromium -> chromium-browser for the wrapper.
+    local packages=("gnome-session-flashback" "gnome-terminal" "chromium" "mousepad" "metacity")
+    for package in "${packages[@]}"; do
         if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "install ok installed"; then
             error "Package $package not properly installed"
             exit 1
         fi
     done
     
-    # Check if modified binaries exist
-    if [[ ! -f /usr/bin/chromium ]] || [[ ! -f /usr/bin/exo-open ]] || [[ ! -f /usr/bin/thunar ]]; then
-        error "Modified binaries not found"
+    if [[ ! -f /usr/bin/chromium ]]; then
+        error "Chromium wrapper not found at /usr/bin/chromium"
         exit 1
     fi
     
-    # Check if configuration files exist
-    if [[ ! -f /defaults/startwm.sh ]] || [[ ! -d /defaults/xfce ]]; then
-        error "XFCE configuration files not found"
+    if [[ ! -f /defaults/startwm.sh ]] || [[ ! -d /defaults/gnome ]]; then
+        error "GNOME defaults or startwm.sh missing under /defaults"
         exit 1
     fi
     
-    # Check if environment is configured (optional check)
-    if [[ -f /etc/environment ]]; then
-        if ! grep -q "TITLE=Ubuntu XFCE" /etc/environment; then
-            warning "Environment TITLE not set to Ubuntu XFCE"
-        fi
-    else
-        warning "Environment file not found - this is normal if selkies wasn't installed first"
+    if [[ -f /etc/environment ]] && ! grep -q 'TITLE="Ubuntu GNOME"' /etc/environment; then
+        warning 'Environment TITLE not set to Ubuntu GNOME'
     fi
     
     success "✓ Webtop installation validated"
@@ -326,12 +275,11 @@ validate_installation() {
 main() {
     info "Starting webtop installation process..."
     
-    # Installation phases
     check_dependencies
     setup_repositories
-    install_xfce_packages
+    install_gnome_packages
     download_webtop_icon
-    apply_xfce_tweaks
+    apply_gnome_tweaks
     install_rootfs_files
     configure_environment
     integrate_with_selkies
@@ -340,18 +288,9 @@ main() {
     
     success "✅ Webtop installation completed successfully!"
     info ""
-    info "Webtop (XFCE Desktop Environment) has been installed and integrated with selkies."
-    info "The desktop service will automatically use XFCE when started."
-    info ""
-    info "To start the webtop environment:"
-    info "  systemctl start selkies-desktop"
-    info ""
-    info "To check status:"
-    info "  systemctl status selkies-desktop"
-    info ""
-    info "Web interface available at: https://localhost:443"
-    info "Title: Ubuntu XFCE"
+    info "Webtop (GNOME Flashback on X11) is installed for Selkies."
+    info "Start the stack with: systemctl start selkies-desktop"
+    info "Web UI: https://localhost:443 — Title: Ubuntu GNOME"
 }
 
-# Run main installation
-main "$@" 
+main "$@"

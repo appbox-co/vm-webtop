@@ -24,14 +24,12 @@ log_fail() { echo "[FAIL] $1"; }
 test_webtop_packages() {
     log_info "Testing webtop package installation..."
     
-    # Check if key packages are installed
     local packages=(
         "chromium"
         "mousepad"
-        "xfce4-terminal"
-        "xfce4"
-        "xubuntu-default-settings"
-        "xubuntu-icon-theme"
+        "gnome-terminal"
+        "gnome-session-flashback"
+        "metacity"
     )
     
     for package in "${packages[@]}"; do
@@ -50,7 +48,7 @@ test_webtop_directories() {
     
     # Check if required directories exist
     local directories=(
-        "/defaults/xfce"
+        "/defaults/gnome"
         "/usr/share/selkies/www"
         "/usr/bin"
         "/usr/local/bin"
@@ -71,11 +69,8 @@ test_webtop_directories() {
 test_webtop_binaries() {
     log_info "Testing webtop binary modifications..."
     
-    # Check if modified binaries exist
     local binaries=(
         "/usr/bin/chromium"
-        "/usr/bin/exo-open"
-        "/usr/bin/thunar"
         "/usr/local/bin/wrapped-chromium"
     )
     
@@ -86,7 +81,6 @@ test_webtop_binaries() {
         fi
     done
     
-    # Check if binaries are executable
     for binary in "${binaries[@]}"; do
         if [[ ! -x "$binary" ]]; then
             log_fail "Binary is not executable: $binary"
@@ -94,19 +88,10 @@ test_webtop_binaries() {
         fi
     done
     
-    # Check if backup binaries exist
-    local backup_binaries=(
-        "/usr/bin/chromium-browser"
-        "/usr/bin/exo-open-real"
-        "/usr/bin/thunar-real"
-    )
-    
-    for backup_binary in "${backup_binaries[@]}"; do
-        if [[ ! -f "$backup_binary" ]]; then
-            log_fail "Backup binary not found: $backup_binary"
-            return $FAIL
-        fi
-    done
+    if [[ ! -f /usr/bin/chromium-browser ]]; then
+        log_fail "Real Chromium binary not found at /usr/bin/chromium-browser"
+        return $FAIL
+    fi
     
     log_pass "All required binaries exist and are executable"
     return $PASS
@@ -115,12 +100,9 @@ test_webtop_binaries() {
 test_webtop_configuration() {
     log_info "Testing webtop configuration files..."
     
-    # Check if XFCE configuration files exist
     local config_files=(
         "/defaults/startwm.sh"
-        "/defaults/xfce/xfce4-panel.xml"
-        "/defaults/xfce/xfwm4.xml"
-        "/defaults/xfce/xsettings.xml"
+        "/defaults/gnome/wallpapers/appbox.svg"
     )
     
     for config_file in "${config_files[@]}"; do
@@ -130,25 +112,15 @@ test_webtop_configuration() {
         fi
     done
     
-    # Check if startwm.sh is executable
     if [[ ! -x "/defaults/startwm.sh" ]]; then
         log_fail "startwm.sh is not executable"
         return $FAIL
     fi
     
-    # Check if XFCE configuration files are valid XML
-    local xml_files=(
-        "/defaults/xfce/xfce4-panel.xml"
-        "/defaults/xfce/xfwm4.xml"
-        "/defaults/xfce/xsettings.xml"
-    )
-    
-    for xml_file in "${xml_files[@]}"; do
-        if ! xmllint --noout "$xml_file" 2>/dev/null; then
-            log_fail "Invalid XML file: $xml_file"
-            return $FAIL
-        fi
-    done
+    if ! grep -q "gnome-flashback-metacity" /defaults/startwm.sh; then
+        log_fail "startwm.sh does not start GNOME Flashback"
+        return $FAIL
+    fi
     
     log_pass "All configuration files exist and are valid"
     return $PASS
@@ -178,7 +150,7 @@ test_webtop_environment() {
     
     # Check if webtop environment variables are set
     local env_vars=(
-        'TITLE="Ubuntu XFCE"'
+        'TITLE="Ubuntu GNOME"'
     )
     
     for env_var in "${env_vars[@]}"; do
@@ -220,15 +192,20 @@ test_webtop_icon() {
 test_webtop_desktop_entry() {
     log_info "Testing webtop desktop entry modifications..."
     
-    # Check if chromium desktop entry exists
-    if [[ ! -f "/usr/share/applications/chromium.desktop" ]]; then
-        log_fail "Chromium desktop entry not found"
+    local desktop=""
+    for candidate in /usr/share/applications/chromium.desktop /usr/share/applications/chromium-browser.desktop; do
+        if [[ -f "$candidate" ]]; then
+            desktop="$candidate"
+            break
+        fi
+    done
+    if [[ -z "$desktop" ]]; then
+        log_fail "No chromium .desktop under /usr/share/applications"
         return $FAIL
     fi
     
-    # Check if desktop entry is modified to use wrapped chromium
-    if ! grep -q "wrapped-chromium" /usr/share/applications/chromium.desktop; then
-        log_fail "Chromium desktop entry not modified to use wrapped chromium"
+    if ! grep -q "wrapped-chromium" "$desktop"; then
+        log_fail "Chromium desktop entry not modified to use wrapped chromium ($desktop)"
         return $FAIL
     fi
     
@@ -258,8 +235,7 @@ test_webtop_repository() {
         return $FAIL
     fi
     
-    # Check if repository contains correct entry
-    if ! grep -q "ppa.launchpadcontent.net/xtradeb/apps/ubuntu noble" /etc/apt/sources.list.d/xtradeb.list; then
+    if ! grep -qE "ppa.launchpadcontent.net/xtradeb/apps/ubuntu (noble|resolute)" /etc/apt/sources.list.d/xtradeb.list; then
         log_fail "xtradeb repository entry is incorrect"
         return $FAIL
     fi

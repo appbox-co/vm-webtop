@@ -5,7 +5,7 @@
 
 # Set up user systemd environment
 echo "Setting up user systemd environment..."
-# Don't export D-Bus variables here - they will be set by XFCE's dbus-launch
+# Don't export D-Bus here; desktop session uses systemd --user session bus (see below).
 export XDG_RUNTIME_DIR="/run/user/$(id -u)"
 /etc/selkies/setup-user-systemd.sh
 
@@ -129,8 +129,8 @@ cd $HOME
 
 # Check if webtop is installed and use appropriate desktop environment
 if [ -f "/etc/selkies/webtop-installed" ]; then
-  # Use XFCE desktop environment (webtop)
-  echo "Starting XFCE desktop environment..."
+  # Webtop: GNOME Flashback on X11 (see /defaults/startwm.sh)
+  echo "Starting GNOME desktop session (webtop)..."
   exec /bin/bash /defaults/startwm.sh
 else
   # Use OpenBox desktop environment (default selkies)

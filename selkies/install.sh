@@ -754,9 +754,9 @@ setup_users() {
         # Install snap-store
         snap install snap-store 2>/dev/null || true
         
-        # Create necessary directories for appbox user
-        mkdir -p /home/appbox/snap/snap-store/common/.cache
-        chown -R appbox:appbox /home/appbox/snap
+        # Skeleton under /defaults so empty virtiofs home on deploy still gets layout (see init-device-setup.sh)
+        mkdir -p /defaults/home-appbox/snap/snap-store/common/.cache
+        chown -R appbox:appbox /defaults/home-appbox
         
         # Connect common snap interfaces for audio support
         info "Connecting snap audio interfaces..."
@@ -1038,7 +1038,7 @@ main() {
     chown appbox:appbox /config
     chmod 755 /config
     
-    # Create /defaults directory and copy files (including xfce/ subtree; cp * omits dirs)
+    # Create /defaults directory and copy files (including gnome/, xfce/ if present; cp * omits dirs)
     mkdir -p /defaults
     cp -a "$SCRIPT_DIR/rootfs/defaults"/. /defaults/
     chown -R appbox:appbox /defaults

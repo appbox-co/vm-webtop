@@ -998,7 +998,7 @@ Examples:
 
 Components:
     selkies    - Selkies GStreamer framework with Xvfb
-    webtop     - XFCE desktop environment
+    webtop     - GNOME Flashback (X11) desktop environment
 
 Kernel Update:
     By default, the script updates to linux-image-generic-6.14 to fix a critical

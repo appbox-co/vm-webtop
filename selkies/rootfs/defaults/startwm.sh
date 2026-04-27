@@ -1,7 +1,7 @@
 #!/bin/bash
+# GNOME Flashback (Metacity) for Selkies / Xvfb when webtop defaults are present.
+# Prefer installing the webtop component, which overwrites /defaults from webtop/rootfs.
 
-# Enable Nvidia/Zink overrides only when explicitly allowed and usable.
-# This avoids unstable GL paths on software-only hosts.
 DISABLE_ZINK="${DISABLE_ZINK:-false}"
 if [ "${DISABLE_ZINK}" != "true" ] && command -v nvidia-smi >/dev/null 2>&1 && [ -r "/dev/dri/renderD128" ]; then
   export LIBGL_KOPPER_DRI2=1
@@ -9,54 +9,24 @@ if [ "${DISABLE_ZINK}" != "true" ] && command -v nvidia-smi >/dev/null 2>&1 && [
   export GALLIUM_DRIVER=zink
 fi
 
-# XFCE defaults from /defaults/xfce/: first login, or when .vm-images-xfce-revision bumps (image update).
-XfceRevSrc=/defaults/xfce/.vm-images-xfce-revision
-UserRev="${HOME}/.config/xfce4/.vm-images-xfce-revision"
-XfceConfDir="${HOME}/.config/xfce4/xfconf/xfce-perchannel-xml"
-need_sync=false
-if [ ! -d "$XfceConfDir" ]; then
-  need_sync=true
-elif [ -f "$XfceRevSrc" ]; then
-  want=$(tr -d ' \n\r\t' < "$XfceRevSrc" 2>/dev/null || echo "")
-  got=$(tr -d ' \n\r\t' < "$UserRev" 2>/dev/null || echo "")
-  [ -n "$want" ] && [ "$want" != "$got" ] && need_sync=true
-fi
-
-if [ "$need_sync" = true ]; then
-  mkdir -p "$XfceConfDir"
-  for f in /defaults/xfce/*.xml; do
-    [ -f "$f" ] || continue
-    cp "$f" "$XfceConfDir/"
-  done
-  if [ -d /defaults/xfce/panel ]; then
-    mkdir -p "${HOME}/.local/share/xfce4/panel"
-    for d in /defaults/xfce/panel/launcher-*; do
-      [ -d "$d" ] || continue
-      base=$(basename "$d")
-      rm -rf "${HOME}/.local/share/xfce4/panel/${base}"
-      cp -a "$d" "${HOME}/.local/share/xfce4/panel/"
-    done
-  fi
-  if [ -f "$XfceRevSrc" ]; then
-    mkdir -p "${HOME}/.config/xfce4"
-    cp "$XfceRevSrc" "$UserRev"
-  fi
-elif [ -d /defaults/xfce/panel ]; then
-  mkdir -p "${HOME}/.local/share/xfce4/panel"
-  for d in /defaults/xfce/panel/launcher-*; do
-    [ -d "$d" ] || continue
-    base=$(basename "$d")
-    if [ ! -d "${HOME}/.local/share/xfce4/panel/${base}" ]; then
-      cp -a "$d" "${HOME}/.local/share/xfce4/panel/"
-    fi
-  done
-fi
-
-# Start DE
-# Use the existing D-Bus session from systemd --user
 if [ -S "${XDG_RUNTIME_DIR}/bus" ]; then
-    export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
 fi
 
-# Start XFCE without creating a new D-Bus session
-exec /usr/bin/xfce4-session
+export GDK_BACKEND=x11
+export XDG_SESSION_TYPE=x11
+export XDG_CURRENT_DESKTOP="GNOME-Flashback:GNOME"
+export XDG_SESSION_DESKTOP="gnome-flashback-metacity"
+
+Wall=/defaults/gnome/wallpapers/appbox.svg
+if [ -f "$Wall" ] && command -v gsettings >/dev/null 2>&1; then
+  uri="file://${Wall}"
+  gsettings set org.gnome.desktop.background picture-uri "$uri" 2>/dev/null || true
+  gsettings set org.gnome.desktop.background picture-uri-dark "$uri" 2>/dev/null || true
+  gsettings set org.gnome.desktop.background picture-options scaled 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface gtk-theme Yaru 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface icon-theme Yaru 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface color-scheme prefer-dark 2>/dev/null || true
+fi
+
+exec /usr/bin/gnome-session --session=gnome-flashback-metacity

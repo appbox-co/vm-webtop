@@ -1,9 +1,0 @@
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=File Manager
-Comment=Browse files
-Exec=exo-open --launch FileManager
-Icon=org.xfce.thunar
-Terminal=false
-Categories=FileManager;
