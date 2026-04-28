@@ -1,9 +1,0 @@
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Web Browser
-Comment=Browse the web
-Exec=exo-open --launch WebBrowser
-Icon=applications-internet
-Terminal=false
-Categories=Network;WebBrowser;

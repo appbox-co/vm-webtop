@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# Ubuntu VM Webtop Environment - Testing Framework
+# Ubuntu VM Images - GNOME RDP - Testing Framework
 # Phase 5: Integration and Testing
 # =============================================================================
 
@@ -21,7 +21,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Test configuration
-TEST_LOG_DIR="/tmp/webtop-tests"
+TEST_LOG_DIR="/tmp/vm-images-tests"
 TEST_RESULTS_FILE="$TEST_LOG_DIR/test-results.json"
 TEST_REPORT_FILE="$TEST_LOG_DIR/test-report.html"
 
@@ -29,9 +29,6 @@ TEST_REPORT_FILE="$TEST_LOG_DIR/test-report.html"
 declare -A TEST_CATEGORIES=(
     ["component"]="Component Tests"
     ["integration"]="Integration Tests"
-    ["performance"]="Performance Tests"
-    ["security"]="Security Tests"
-    ["user-acceptance"]="User Acceptance Tests"
 )
 
 # Logging functions
@@ -193,7 +190,7 @@ run_all_tests() {
     log_info "Starting comprehensive test suite"
     
     # Run tests in order
-    for category in "component" "integration" "performance" "security" "user-acceptance"; do
+    for category in "component" "integration"; do
         if [[ -n "${TEST_CATEGORIES[$category]:-}" ]]; then
             run_test_category "$category"
         fi
@@ -232,7 +229,7 @@ generate_test_report() {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Ubuntu VM Webtop Environment - Test Report</title>
+    <title>Ubuntu VM Images - GNOME RDP - Test Report</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .header { background: #f0f0f0; padding: 20px; border-radius: 5px; }
@@ -250,7 +247,7 @@ generate_test_report() {
 </head>
 <body>
     <div class="header">
-        <h1>Ubuntu VM Webtop Environment - Test Report</h1>
+        <h1>Ubuntu VM Images - GNOME RDP - Test Report</h1>
         <p><strong>Test Run:</strong> $start_time</p>
         <p><strong>Duration:</strong> ${duration}s</p>
         <p><strong>Generated:</strong> $(date)</p>
@@ -342,7 +339,7 @@ EOF
 
 show_help() {
     cat << EOF
-Ubuntu VM Webtop Environment - Testing Framework
+Ubuntu VM Images - GNOME RDP - Testing Framework
 
 Usage: $0 [OPTIONS] [CATEGORY]
 
@@ -356,9 +353,6 @@ Options:
 Categories:
     component           Component validation tests
     integration         End-to-end integration tests
-    performance         Performance benchmarking tests
-    security            Security validation tests
-    user-acceptance     User acceptance tests
     all                 Run all test categories (default)
 
 Examples:
@@ -448,10 +442,8 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-# Check if running in Ubuntu Noble
-if ! grep -q "Ubuntu 24.04" /etc/os-release 2>/dev/null; then
-    echo -e "${YELLOW}[WARNING]${NC} This testing framework is designed for Ubuntu 24.04 (Noble)"
-    echo "Current system may not be supported"
+if ! grep -qE "VERSION_ID=\"(24|26)\.04\"" /etc/os-release 2>/dev/null; then
+    echo -e "${YELLOW}[WARNING]${NC} Expected Ubuntu 24.04 or 26.04; current OS may differ"
 fi
 
 # Run main function

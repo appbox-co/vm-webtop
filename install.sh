@@ -1,9 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-# Ubuntu VM Webtop Environment - Master Installation Script
-# Phase 2: Foundation
-# Version: 1.0.0
+# Ubuntu VM Images - Master installer (GNOME + GDM + GNOME Remote Desktop / RDP)
+# Version: 2.0.0
 
 # Set non-interactive mode globally to prevent apt hangs
 export DEBIAN_FRONTEND=noninteractive
@@ -731,31 +730,13 @@ setup_environment() {
         software-properties-common \
         rsync
     
-    # Install Docker if not already present
-    if ! command -v docker &> /dev/null; then
-        info "Installing Docker..."
-        install_packages docker.io
-    else
-        info "Docker is already installed"
-    fi
-    
-    # Start Docker service for image extractions
-    if systemctl is-system-running --quiet || systemctl is-system-running | grep -q "degraded"; then
-        systemctl start docker || warn "Failed to start Docker service"
-        systemctl enable docker || warn "Failed to enable Docker service"
-    else
-        warn "Systemd not running properly, Docker service management skipped"
-        # Try to start Docker manually if possible
-        service docker start 2>/dev/null || true
-    fi
-    
     info "✓ Environment setup completed"
 }
 
 install_all_components() {
     info "Starting installation of all components..."
     
-    local components=("selkies" "webtop")
+    local components=("desktop")
     local total_components=${#components[@]}
     local current=0
     local failed_components=()
@@ -978,13 +959,13 @@ cleanup() {
 
 show_help() {
     cat << EOF
-Ubuntu VM Webtop Environment - Installation Script
+Ubuntu VM Images - GNOME Remote Desktop (RDP) installer
 Supported: Ubuntu 24.04 LTS (noble) and 26.04 LTS (resolute).
 
 Usage: $0 [OPTIONS]
 
 Options:
-    --component <name>       Install only specified component (selkies, webtop)
+    --component <name>       Install only specified component (desktop)
     --dry-run               Show what would be done without executing
     --verbose               Enable verbose output
     --skip-kernel-update    Skip kernel update to linux-image-generic-6.14
@@ -992,13 +973,12 @@ Options:
 
 Examples:
     $0                           # Install all components with kernel update
-    $0 --component selkies       # Install only selkies component
+    $0 --component desktop         # Install only the desktop component
     $0 --dry-run --verbose       # Show installation plan with details
     $0 --skip-kernel-update      # Install without updating kernel
 
 Components:
-    selkies    - Selkies GStreamer framework with Xvfb
-    webtop     - GNOME Flashback (X11) desktop environment
+    desktop    - GNOME desktop, GDM, GNOME Remote Desktop (headless RDP / Remote Login)
 
 Kernel Update:
     By default, the script updates to linux-image-generic-6.14 to fix a critical
@@ -1052,8 +1032,8 @@ main() {
     # Show banner
     echo -e "${BLUE}"
     echo "========================================"
-    echo "Ubuntu VM Webtop Environment Installer"
-    echo "Version: 1.0.0"
+    echo "Ubuntu VM Images - GNOME RDP Installer"
+    echo "Version: 2.0.0"
     echo "========================================"
     echo -e "${NC}"
     
@@ -1063,6 +1043,11 @@ main() {
     
     # Validate system
     validate_system
+
+    if [[ -n "$COMPONENT_ONLY" && "$COMPONENT_ONLY" != "desktop" ]]; then
+        error "Unknown component: $COMPONENT_ONLY (supported: desktop)"
+        exit 1
+    fi
     
     # Setup environment
     setup_environment
@@ -1126,26 +1111,28 @@ main() {
             echo "Please reboot the system to use the new kernel:"
             echo "  sudo reboot"
             echo ""
-            echo "After reboot, you can access the webtop at:"
+            echo "After reboot, connect with Windows Remote Desktop (mstsc) to this host on the"
+            echo "TCP port set in /etc/default/gnome-remote-desktop-appbox (RDP_PORT)."
             echo -e "${GREEN}"
         else
-            echo "You can now access the webtop at:"
+            echo "Connect with Windows Remote Desktop to this host on the configured RDP port."
         fi
         
-        echo "  https://localhost:443"
+        echo "  RDP_PORT and optional credentials: /etc/default/gnome-remote-desktop-appbox"
+        echo "  Generated RDP password (if used): sudo cat /etc/gnome-remote-desktop/rdp-secret"
         echo ""
         echo "To check service status:"
-        echo "  systemctl status selkies"
-        echo "  systemctl status selkies-desktop"
+        echo "  systemctl status gdm3"
+        echo "  systemctl status gnome-remote-desktop"
+        echo "  grdctl --system status"
         echo ""
         echo "For troubleshooting, check:"
-        echo "  journalctl -u selkies -f"
-        echo "  journalctl -u selkies-desktop -f"
+        echo "  journalctl -u gnome-remote-desktop -f"
+        echo "  journalctl -u gdm -f"
         echo ""
         echo "Additional features:"
-        echo "  - Snap Store: Available in desktop menu"
-        echo "  - Flatpak: Available via terminal (flatpak install <app>)"
-        echo "  - Audio: Full support including Spotify and other apps"
+        echo "  - Snap Store and GNOME Software (snap + flatpak plugins)"
+        echo "  - Flatpak: flathub configured for user appbox"
         echo "========================================"
         echo -e "${NC}"
     fi

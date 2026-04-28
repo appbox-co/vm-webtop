@@ -1,0 +1,14 @@
+[Unit]
+Description=Configure GNOME Remote Desktop (system RDP / headless login)
+Documentation=file:///usr/local/sbin/appbox-configure-gnome-rdp.sh
+After=network-online.target
+Wants=network-online.target
+Before=gnome-remote-desktop.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/appbox-configure-gnome-rdp.sh
+
+[Install]
+WantedBy=multi-user.target

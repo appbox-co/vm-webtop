@@ -1,6 +1,6 @@
-# Custom Root Filesystem Directory
+# Custom root filesystem directory
 
-This directory allows you to add custom files that will be copied to the system during installation, following the same pattern as component `rootfs/` directories.
+Add files here to mirror paths under `/` during the **master** `install.sh` run (same idea as `desktop/rootfs/`). Useful for site-specific systemd units, extra packages’ config, or branding.
 
 ## Usage
 

@@ -1,0 +1,20 @@
+#!/bin/bash
+# Chromium with flags required on many Ubuntu/AppArmor setups.
+set -euo pipefail
+
+if [[ -x /snap/bin/chromium ]]; then
+    BIN=/snap/bin/chromium
+elif [[ -x /usr/bin/chromium-browser ]]; then
+    BIN=/usr/bin/chromium-browser
+elif [[ -x /usr/bin/chromium ]]; then
+    BIN=/usr/bin/chromium
+else
+    echo "wrapped-chromium: no chromium binary found" >&2
+    exit 127
+fi
+
+if ! pgrep -x chromium >/dev/null 2>&1 && ! pgrep -f snap/chromium >/dev/null 2>&1; then
+    rm -f "${HOME}/.config/chromium/SingletonLock" "${HOME}/.config/chromium/SingletonSocket" "${HOME}/.config/chromium/SingletonCookie" 2>/dev/null || true
+fi
+
+exec "${BIN}" --no-first-run --password-store=basic --no-sandbox --test-type "$@"

@@ -1,8 +1,0 @@
-// Allow appbox user to manage Flatpak
-polkit.addRule(function(action, subject) {
-    // Allow all Flatpak operations for appbox user
-    if (action.id.indexOf("org.freedesktop.Flatpak") === 0 &&
-        subject.user == "appbox") {
-        return polkit.Result.YES;
-    }
-});

@@ -1,7 +1,0 @@
-# Selkies nginx HTTP basic authentication (see /etc/selkies/init-nginx.sh).
-# Override PASSWORD before first boot (cloud-init, image build) or edit and run:
-#   sudo systemctl restart selkies-nginx
-#
-# To use a pre-hashed line instead, set BASIC_AUTH in /etc/environment
-# (e.g. appbox:$apr1$...) and remove PASSWORD from this file.
-PASSWORD=appbox

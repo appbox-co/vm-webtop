@@ -1,0 +1,12 @@
+# GNOME Remote Desktop (system / headless login) — sourced by
+# /usr/local/sbin/appbox-configure-gnome-rdp.sh at boot and after install.
+#
+# RDP_PORT: TCP port for Windows Remote Desktop (mstsc). Override in production
+# (e.g. cloud-init) to match your port mapping.
+RDP_PORT=3389
+
+# Optional: fixed credentials for the *first* RDP handshake (GDM login screen).
+# If unset, a random password is generated once and stored in
+# /etc/gnome-remote-desktop/rdp-secret (mode 0600).
+# GRD_RDP_USERNAME=rdp-login
+# GRD_RDP_PASSWORD=

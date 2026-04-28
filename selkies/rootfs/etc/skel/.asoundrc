@@ -1,8 +1,0 @@
-# User ALSA configuration for PulseAudio
-pcm.!default {
-    type pulse
-}
-
-ctl.!default {
-    type pulse
-}

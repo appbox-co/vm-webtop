@@ -1,6 +1,29 @@
-# Changelog: Ubuntu VM Webtop Environment
+# Changelog: Ubuntu VM Images
 
-## Project Status: 100% COMPLETE (Phase 5 of 5) - FINAL RELEASE
+## 2.0.0 — GNOME + GDM + GNOME Remote Desktop (RDP) — 2026-04
+
+### Breaking changes
+
+- **Removed** the **`selkies/`** and **`webtop/`** components (Selkies browser streaming, Xvfb, nginx, GNOME Flashback on virtual X).
+- **Access model** is now **Windows RDP** to **GNOME Remote Desktop** in **system / headless (Remote Login)** mode only.
+
+### Added
+
+- **`desktop/`** installer: **`ubuntu-desktop-minimal`**, **`gnome-remote-desktop`**, **`winpr-utils`**, **`polkitd`**, **`pkexec`**, **`mousepad`**, **`gnome-software`** + snap/flatpak plugins, **`flatpak`**, **`snapd`**, Chromium and Snap Store snaps.
+- **`appbox-configure-gnome-rdp.service`** + **`/usr/local/sbin/appbox-configure-gnome-rdp.sh`**: TLS, **`RDP_PORT`** from **`/etc/default/gnome-remote-desktop-appbox`**, credentials, **`grdctl --system rdp enable`**.
+- **Wallpaper** and **dconf** defaults under **`desktop/rootfs/`**; **polkit** rules for **`appbox`** snap/flatpak.
+- **Slimmed testing** to **`component`** + **`integration`** only (`test_desktop_installation.sh`, smoke **`test_end_to_end.sh`**).
+
+### Changed
+
+- **`install.sh`** installs only **`desktop`**; Docker is no longer installed by the master script.
+- Documentation (**`ARCHITECTURE.md`**, **`OVERVIEW.md`**, **`testing/docs/*`**) rewritten for the RDP architecture.
+
+---
+
+## Historical: Ubuntu VM Webtop Environment (pre-2.0)
+
+### Project Status (legacy): 100% COMPLETE (Phase 5 of 5) - FINAL RELEASE
 
 ### 🎉 FINAL RELEASE: Complete Multimedia Integration + Custom Scripts (September 2025)
 
