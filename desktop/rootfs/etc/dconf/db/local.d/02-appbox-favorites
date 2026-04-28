@@ -1,0 +1,3 @@
+[org/gnome/shell]
+enabled-extensions=['ubuntu-dock@ubuntu.com', 'ubuntu-appindicators@ubuntu.com', 'ding@rastersoft.com']
+favorite-apps=['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'chromium.desktop', 'org.xfce.mousepad.desktop', 'snap-store_snap-store.desktop']

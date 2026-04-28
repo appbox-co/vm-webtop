@@ -22,14 +22,20 @@ vm_images/
 
 ## Runtime flow
 
-1. **Boot** reaches `graphical.target`; **GDM** starts the greeter (no local monitor required for RDP path).
-2. **`appbox-configure-gnome-rdp.service`** (oneshot, `Before=gnome-remote-desktop.service`) runs **`/usr/local/sbin/appbox-configure-gnome-rdp.sh`**:
-   - Sources **`/etc/default/gnome-remote-desktop-appbox`** for **`RDP_PORT`** (and optional **`GRD_RDP_USERNAME`** / **`GRD_RDP_PASSWORD`**).
-   - Ensures TLS material under **`/var/lib/gnome-remote-desktop/.local/share/gnome-remote-desktop/`** via **`winpr-makecert`**.
+1. **Boot** reaches `multi-user.target`; **`appbox-first-boot.service`** runs after **`cloud-config.service`** (cloud-init `write_files`) and before GRD configuration:
+   - Reads **`RDP_PORT`** from the service environment (**`/etc/environment`** or **`/etc/default/appbox-first-boot`**) and persists it into **`/etc/default/gnome-remote-desktop-appbox`**.
+   - If **`/tmp/user_pw`** exists, applies it to the Linux **`appbox`** user and stores the same value in **`/etc/gnome-remote-desktop/rdp-secret`** for the first RDP handshake, then removes the file.
+   - Optionally sends a one-time installed callback when **`APPBOX_INSTALLED_CALLBACK_URL`** (or **`APPBOX_CALLBACK_URL`** / **`APPBOX_API_CALLBACK_URL`**) is set.
+2. **Boot** reaches `graphical.target`; **GDM** starts the greeter (no local monitor required for RDP path).
+3. **`appbox-configure-gnome-rdp.service`** (oneshot, `After=appbox-first-boot.service`, `Before=gnome-remote-desktop.service`) runs **`/usr/local/sbin/appbox-configure-gnome-rdp.sh`**:
+   - Sources **`/etc/default/gnome-remote-desktop-appbox`** for **`RDP_PORT`**, **`GRD_RDP_USERNAME`** (default **`appbox`**), and optional **`GRD_RDP_PASSWORD`**.
+   - Ensures TLS material under **`/var/lib/gnome-remote-desktop/.local/share/gnome-remote-desktop/`** with **OpenSSL** (SAN includes **`hostname`**, default route **IPv4**, and optional **`RDP_TLS_EXTRA_SAN`**) when **`openssl`** is present; otherwise **`winpr-makecert`**. Set **`RDP_TLS_CN`**, **`RDP_TLS_EXTRA_SAN`**, and one-shot **`RDP_TLS_REGEN=1`** so **Windows mstsc** sees a cert that matches the public **DNS/IP** clients use (see **`testing/docs/DEPLOYMENT_GUIDE.md`**).
    - Applies settings with **`grdctl --system`** (`set-tls-*`, `set-port`, `set-credentials`, `enable`).
    - If **`GRD_RDP_PASSWORD`** is unset, a random password is written once to **`/etc/gnome-remote-desktop/rdp-secret`** (mode `0600`).
-3. **`gnome-remote-desktop.service`** listens on **`RDP_PORT`** (default **3389** in the shipped defaults file).
-4. The user connects with an RDP client using the **system RDP credentials**, then authenticates on **GDM** as **`appbox`** (or another local user).
+4. **`gnome-remote-desktop.service`** listens on **`RDP_PORT`** (default **3389** in the shipped defaults file).
+5. The user connects with an RDP client using the **system RDP credentials**, then authenticates on **GDM** as **`appbox`** (or another local user).
+
+**RDP client expectations:** The **system / headless** (“Remote Login”) path is defined around **Windows `mstsc.exe`** behaviour: after GDM, the server uses **server redirection** and **one-time** credentials. **macOS** and many **third-party** RDP clients often **fail after login** (black screen, then disconnect) even when the first hop and GDM work — same class of issue as [GNOME/gnome-remote-desktop#215](https://gitlab.gnome.org/GNOME/gnome-remote-desktop/-/issues/215). For a reliable experience, use **`mstsc`** from Windows (or a Windows VM). Details: **`testing/docs/DEPLOYMENT_GUIDE.md`**.
 
 **`polkitd` / `pkexec`** are required so **`grdctl --system`** can talk to the polkit-backed configuration path.
 

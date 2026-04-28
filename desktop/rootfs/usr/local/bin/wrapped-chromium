@@ -2,10 +2,12 @@
 # Chromium with flags required on many Ubuntu/AppArmor setups.
 set -euo pipefail
 
-if [[ -x /snap/bin/chromium ]]; then
-    BIN=/snap/bin/chromium
+if [[ -x /usr/lib/chromium/chromium ]]; then
+    BIN=/usr/lib/chromium/chromium
 elif [[ -x /usr/bin/chromium-browser ]]; then
     BIN=/usr/bin/chromium-browser
+elif [[ -x /snap/bin/chromium ]]; then
+    BIN=/snap/bin/chromium
 elif [[ -x /usr/bin/chromium ]]; then
     BIN=/usr/bin/chromium
 else

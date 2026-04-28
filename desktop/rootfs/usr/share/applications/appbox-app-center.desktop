@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=App Center
+Comment=Install and manage applications
+Exec=/snap/bin/snap-store %U
+Icon=/snap/snap-store/current/bin/data/flutter_assets/assets/app-center.png
+Terminal=false
+Categories=System;PackageManager;
+Keywords=Ubuntu;Applications;Apps;Store;Software;Snaps;
+MimeType=x-scheme-handler/snap;application/vnd.debian.binary-package;
+StartupNotify=true

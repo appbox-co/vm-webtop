@@ -1,0 +1,16 @@
+[Unit]
+Description=Appbox first-boot provisioning
+# cloud-init write_files runs in the config stage. Waiting for cloud-final is
+# too late and can create an ordering cycle with desktop/RDP services.
+After=cloud-config.service network-online.target
+Wants=cloud-config.service network-online.target
+Before=appbox-configure-gnome-rdp.service gnome-remote-desktop.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/environment
+EnvironmentFile=-/etc/default/appbox-first-boot
+ExecStart=/usr/local/sbin/appbox-first-boot.sh
+
+[Install]
+WantedBy=multi-user.target

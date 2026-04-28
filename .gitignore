@@ -1,4 +1,5 @@
 docker-image-repos/
+.cursor/mcp.json
 custom-scripts/*
 !custom-scripts/README.md
 custom-rootfs/*

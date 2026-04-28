@@ -579,18 +579,17 @@ install_component() {
     
     # Execute component installer
     if [[ "$DRY_RUN" == false ]]; then
-        local original_dir="$PWD"
         cd "$component_dir"
         
         debug "Running component installer for $component_name"
         if ./install.sh; then
             debug "Component installer completed successfully"
-            cd "$original_dir"
+            cd "$SCRIPT_DIR" || cd /
             return 0
         else
             local exit_code=$?
             error "Component installer failed with exit code: $exit_code"
-            cd "$original_dir"
+            cd "$SCRIPT_DIR" || cd /
             return 1
         fi
     else

@@ -1,3 +1,7 @@
 [org/gnome/desktop/background]
 picture-uri='file:///usr/share/backgrounds/appbox/appbox.svg'
 picture-uri-dark='file:///usr/share/backgrounds/appbox/appbox.svg'
+picture-options='centered'
+color-shading-type='solid'
+primary-color='#0e0f15'
+secondary-color='#0e0f15'

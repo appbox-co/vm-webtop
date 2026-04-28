@@ -9,9 +9,18 @@
 
 ### Added
 
+- **`/tmp/user_pw`**: if present before **`desktop/install.sh`** runs, its contents set the **`appbox`** password via **`chpasswd`**, then the file is deleted (cloud-init pattern).
+- **`cleanup_legacy_desktop_environment()`**: strips legacy Selkies/webtop global X11/audio/container variables, fixes top-level directory ownership and **`/tmp`** sticky permissions, and removes stale PAM/profile/PulseAudio overrides that break GDM and system GRD handover.
+- **`repair_appbox_owned_system_paths()`**: repairs legacy **`appbox`** ownership under system paths like **`/etc`**, **`/usr`**, **`/var`**, and **`/srv`** while leaving user/app data alone.
+- **`desktop/rootfs/etc/tmpfiles.d/appbox-x11.conf`**: keeps **`/tmp/.X11-unix`** root-owned so XWayland survives GDM DynamicUser greeter rotation.
+- **`desktop/rootfs/etc/systemd/resolved.conf.d/appbox-dns.conf`**: provides global/fallback DNS servers for VMs where NetworkManager and early-boot networkd state conflict and fail to publish link DNS to **`systemd-resolved`**.
+- **`desktop/rootfs/etc/dconf/db/local.d/01-appbox-dock`**: makes the Ubuntu Dock background white at 25% opacity by default.
+- **`GRD_RDP_USERNAME=appbox`**: uses **`appbox`** as the default GNOME Remote Desktop system-login username for the first RDP handshake.
+- **`appbox-first-boot.service`** + **`/usr/local/sbin/appbox-first-boot.sh`**: first-boot provisioning for **`RDP_PORT`**, **`/tmp/user_pw`**, the persistent GRD RDP secret, and an optional one-time Appbox installed callback.
+- **`configure_nsswitch_for_systemd_users()`**: ensures **`systemd`** is present in the NSS passwd/group chains so GDM DynamicUser greeter accounts resolve correctly.
 - **`desktop/`** installer: **`ubuntu-desktop-minimal`**, **`gnome-remote-desktop`**, **`winpr-utils`**, **`polkitd`**, **`pkexec`**, **`mousepad`**, **`gnome-software`** + snap/flatpak plugins, **`flatpak`**, **`snapd`**, Chromium and Snap Store snaps.
 - **`appbox-configure-gnome-rdp.service`** + **`/usr/local/sbin/appbox-configure-gnome-rdp.sh`**: TLS, **`RDP_PORT`** from **`/etc/default/gnome-remote-desktop-appbox`**, credentials, **`grdctl --system rdp enable`**.
-- **Wallpaper** and **dconf** defaults under **`desktop/rootfs/`**; **polkit** rules for **`appbox`** snap/flatpak.
+- **Wallpaper** and **dconf** defaults under **`desktop/rootfs/`**, including a centered 300px Appbox background on the Appbox dark fill color; **polkit** rules for **`appbox`** snap/flatpak.
 - **Slimmed testing** to **`component`** + **`integration`** only (`test_desktop_installation.sh`, smoke **`test_end_to_end.sh`**).
 
 ### Changed

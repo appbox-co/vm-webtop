@@ -47,7 +47,7 @@ init_test_framework() {
     
     # Create test directories
     mkdir -p "$TEST_LOG_DIR"
-    rm -f "$TEST_LOG_DIR"/*
+    find "$TEST_LOG_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
     
     # Initialize test results
     cat > "$TEST_RESULTS_FILE" << 'EOF'
@@ -149,7 +149,8 @@ discover_tests() {
         return
     fi
     
-    log_info "Discovering tests in category: $category"
+    # Do not log to stdout here — stdout is parsed as name|script|category|description.
+    echo -e "${BLUE}[INFO]${NC} Discovering tests in category: $category" | tee -a "$TEST_LOG_DIR/test.log" >&2
     
     # Find all test scripts
     find "$test_dir" -name "test_*.sh" -type f | sort | while read -r test_script; do
@@ -180,7 +181,7 @@ run_test_category() {
     
     discover_tests "$category" | while IFS='|' read -r test_name test_script category description; do
         run_test "$test_name" "$test_script" "$category" "$description"
-        ((test_count++))
+        test_count=$((test_count + 1))
     done
     
     log_info "Completed ${TEST_CATEGORIES[$category]} ($test_count tests)"
@@ -211,7 +212,7 @@ generate_test_report() {
     local end_time=$(date -Iseconds)
     local duration=$(($(date +%s) - $(date -d "$start_time" +%s)))
     
-    # Count results
+    # Count results (grep -c exits 1 when count is 0; tolerate under set -e)
     local total_tests=0
     local passed=0
     local failed=0
@@ -219,9 +220,12 @@ generate_test_report() {
     
     if [[ -f "$TEST_LOG_DIR/test_results.tmp" ]]; then
         total_tests=$(wc -l < "$TEST_LOG_DIR/test_results.tmp")
-        passed=$(grep -c '"result":"PASS"' "$TEST_LOG_DIR/test_results.tmp" || echo 0)
-        failed=$(grep -c '"result":"FAIL"' "$TEST_LOG_DIR/test_results.tmp" || echo 0)
-        timeouts=$(grep -c '"result":"TIMEOUT"' "$TEST_LOG_DIR/test_results.tmp" || echo 0)
+        set +e
+        passed=$(grep -c '"result":"PASS"' "$TEST_LOG_DIR/test_results.tmp")
+        failed=$(grep -c '"result":"FAIL"' "$TEST_LOG_DIR/test_results.tmp")
+        timeouts=$(grep -c '"result":"TIMEOUT"' "$TEST_LOG_DIR/test_results.tmp")
+        set -e
+        : "${passed:=0}" "${failed:=0}" "${timeouts:=0}"
     fi
     
     # Generate HTML report

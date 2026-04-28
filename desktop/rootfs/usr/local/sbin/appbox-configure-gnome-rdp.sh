@@ -12,7 +12,7 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 : "${RDP_PORT:=3389}"
-USER_NAME="${GRD_RDP_USERNAME:-rdp-login}"
+USER_NAME="${GRD_RDP_USERNAME:-appbox}"
 
 if ! command -v grdctl >/dev/null 2>&1; then
     echo "appbox-configure-gnome-rdp: grdctl not installed, skipping" >&2
@@ -21,9 +21,70 @@ fi
 
 install -d -o gnome-remote-desktop -g gnome-remote-desktop -m 0755 "$STATE_DIR"
 
-if [[ ! -f "$STATE_DIR/rdp-tls.crt" || ! -f "$STATE_DIR/rdp-tls.key" ]]; then
-    sudo -u gnome-remote-desktop winpr-makecert -silent -rdp -path "$STATE_DIR" rdp-tls
-fi
+primary_ipv4() {
+    local p
+    if command -v ip >/dev/null 2>&1; then
+        p=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '/src / {for (i = 1; i <= NF; i++) if ($i == "src") { print $(i + 1); exit }}' || true)
+    fi
+    if [[ -z "$p" ]] && command -v hostname >/dev/null 2>&1; then
+        p=$(hostname -I 2>/dev/null | awk '{ print $1 }' || true)
+    fi
+    echo "${p:-}"
+}
+
+# Windows mstsc often closes before any prompt if the TLS CN/SAN does not match the
+# PC name or IP you type. winpr-makecert only encodes the local hostname — use openssl
+# with SAN when openssl is available.
+ensure_rdp_tls_cert() {
+    local key="$STATE_DIR/rdp-tls.key"
+    local crt="$STATE_DIR/rdp-tls.crt"
+    local regen=false
+
+    if [[ ! -f "$key" || ! -f "$crt" ]]; then
+        regen=true
+    fi
+    if [[ "${RDP_TLS_REGEN:-0}" == "1" ]]; then
+        regen=true
+    fi
+
+    if [[ "$regen" != true ]]; then
+        return 0
+    fi
+
+    if ! command -v openssl >/dev/null 2>&1; then
+        sudo -u gnome-remote-desktop winpr-makecert -silent -rdp -path "$STATE_DIR" rdp-tls
+        return 0
+    fi
+
+    local fq short cn primary san tmp
+    fq=$(hostname -f 2>/dev/null || hostname)
+    short=$(hostname -s 2>/dev/null || echo "$fq")
+    cn="${RDP_TLS_CN:-$fq}"
+    primary=$(primary_ipv4)
+
+    san="DNS:${fq},DNS:${short}"
+    if [[ -n "$primary" ]]; then
+        san="${san},IP:${primary}"
+    fi
+    if [[ -n "${RDP_TLS_EXTRA_SAN:-}" ]]; then
+        san="${san},${RDP_TLS_EXTRA_SAN}"
+    fi
+
+    tmp=$(mktemp -d)
+    chmod 700 "$tmp"
+    openssl req -x509 -nodes -newkey rsa:3072 \
+        -keyout "$tmp/rdp-tls.key" \
+        -out "$tmp/rdp-tls.crt" \
+        -days 825 \
+        -subj "/CN=${cn}" \
+        -addext "subjectAltName=${san}"
+
+    install -m 0640 -o gnome-remote-desktop -g gnome-remote-desktop "$tmp/rdp-tls.key" "$key"
+    install -m 0644 -o gnome-remote-desktop -g gnome-remote-desktop "$tmp/rdp-tls.crt" "$crt"
+    rm -rf "$tmp"
+}
+
+ensure_rdp_tls_cert
 
 grdctl --system rdp set-tls-key "$STATE_DIR/rdp-tls.key"
 grdctl --system rdp set-tls-cert "$STATE_DIR/rdp-tls.crt"
