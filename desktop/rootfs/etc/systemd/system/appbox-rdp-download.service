@@ -1,0 +1,20 @@
+[Unit]
+Description=Configure HTTPS Appbox RDP profile download
+After=network-online.target appbox-first-boot.service
+Wants=network-online.target appbox-first-boot.service
+ConditionPathExists=/etc/appbox-rdp-download/htpasswd
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/gnome-remote-desktop-appbox
+EnvironmentFile=-/etc/environment
+EnvironmentFile=-/etc/default/appbox-first-boot
+EnvironmentFile=-/etc/default/appbox-rdp-download
+ExecStart=/usr/local/sbin/appbox-configure-rdp-download.sh
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

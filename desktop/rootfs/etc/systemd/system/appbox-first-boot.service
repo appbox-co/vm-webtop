@@ -4,7 +4,7 @@ Description=Appbox first-boot provisioning
 # too late and can create an ordering cycle with desktop/RDP services.
 After=cloud-config.service network-online.target
 Wants=cloud-config.service network-online.target
-Before=appbox-configure-gnome-rdp.service gnome-remote-desktop.service
+Before=appbox-configure-gnome-rdp.service gnome-remote-desktop.service appbox-rdp-download.service
 
 [Service]
 Type=oneshot

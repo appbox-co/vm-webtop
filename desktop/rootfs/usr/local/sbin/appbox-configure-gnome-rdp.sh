@@ -20,6 +20,11 @@ if ! command -v grdctl >/dev/null 2>&1; then
 fi
 
 install -d -o gnome-remote-desktop -g gnome-remote-desktop -m 0755 "$STATE_DIR"
+install -d -o gnome-remote-desktop -g gnome-remote-desktop -m 0750 /etc/gnome-remote-desktop
+if [[ -f /etc/gnome-remote-desktop/grd.conf ]]; then
+    chown gnome-remote-desktop:gnome-remote-desktop /etc/gnome-remote-desktop/grd.conf
+    chmod 0664 /etc/gnome-remote-desktop/grd.conf
+fi
 
 primary_ipv4() {
     local p
@@ -95,7 +100,7 @@ if [[ -n "${GRD_RDP_PASSWORD:-}" ]]; then
 elif [[ -f "$SECRET_FILE" ]]; then
     PASSWORD=$(tr -d '\n' <"$SECRET_FILE")
 else
-    install -d -m 0755 /etc/gnome-remote-desktop
+    install -d -m 0750 -o gnome-remote-desktop -g gnome-remote-desktop /etc/gnome-remote-desktop
     PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | head -c 24)
     umask 077
     printf '%s' "$PASSWORD" >"$SECRET_FILE"

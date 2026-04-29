@@ -290,6 +290,7 @@ install_packages() {
         flatpak \
         snapd \
         openssl \
+        nginx \
         curl \
         ca-certificates \
         dbus-x11 \
@@ -359,6 +360,7 @@ install_rootfs() {
     chown root:root / /etc /srv /usr /var 2>/dev/null || true
     chmod 755 /usr/local/bin/wrapped-chromium 2>/dev/null || true
     chmod 755 /usr/bin/chromium 2>/dev/null || true
+    chmod 750 /usr/local/sbin/appbox-configure-rdp-download.sh 2>/dev/null || true
     chmod 750 /usr/local/sbin/appbox-first-boot.sh
     chmod 750 /usr/local/sbin/appbox-configure-gnome-rdp.sh
 }
@@ -382,6 +384,7 @@ enable_systemd_units() {
     systemctl daemon-reload
     systemctl enable appbox-first-boot.service
     systemctl enable appbox-configure-gnome-rdp.service
+    systemctl enable appbox-rdp-download.service
     systemctl enable gdm3.service
     systemctl enable gnome-remote-desktop.service
     systemctl set-default graphical.target

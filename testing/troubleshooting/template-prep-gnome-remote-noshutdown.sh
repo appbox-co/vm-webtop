@@ -18,12 +18,16 @@ copy_if_present() {
 }
 
 log_step 1 "Install latest GNOME/RDP runtime files from /tmp when present"
-install -d -m 0755 /usr/local/sbin /etc/systemd/system /etc/default /etc/gnome-remote-desktop
+install -d -m 0755 /usr/local/sbin /etc/systemd/system /etc/default /etc/appbox-rdp-download /var/lib/appbox-rdp-download
+install -d -m 0750 -o gnome-remote-desktop -g gnome-remote-desktop /etc/gnome-remote-desktop
 copy_if_present /tmp/appbox-first-boot.sh /usr/local/sbin/appbox-first-boot.sh 0750
 copy_if_present /tmp/appbox-configure-gnome-rdp.sh /usr/local/sbin/appbox-configure-gnome-rdp.sh 0750
 copy_if_present /tmp/appbox-first-boot.service /etc/systemd/system/appbox-first-boot.service 0644
 copy_if_present /tmp/appbox-configure-gnome-rdp.service /etc/systemd/system/appbox-configure-gnome-rdp.service 0644
 copy_if_present /tmp/gnome-remote-desktop-appbox /etc/default/gnome-remote-desktop-appbox 0644
+copy_if_present /tmp/appbox-configure-rdp-download.sh /usr/local/sbin/appbox-configure-rdp-download.sh 0750
+copy_if_present /tmp/appbox-rdp-download.service /etc/systemd/system/appbox-rdp-download.service 0644
+copy_if_present /tmp/appbox-rdp-download /etc/default/appbox-rdp-download 0644
 
 # Reset host-specific runtime values. First boot will apply RDP_PORT from the
 # provisioned environment and /tmp/user_pw from cloud-init.
@@ -34,7 +38,7 @@ GRD_RDP_USERNAME='appbox'
 EOF
 
 systemctl daemon-reload
-systemctl enable appbox-first-boot.service appbox-configure-gnome-rdp.service gdm3.service gnome-remote-desktop.service
+systemctl enable appbox-first-boot.service appbox-configure-gnome-rdp.service appbox-rdp-download.service gdm3.service gnome-remote-desktop.service
 systemctl --global enable gnome-remote-desktop-handover.service 2>/dev/null || true
 systemctl disable --now systemd-networkd-wait-online.service 2>/dev/null || true
 systemctl enable NetworkManager.service NetworkManager-wait-online.service 2>/dev/null || true
@@ -70,6 +74,7 @@ apt-get -y autoremove --purge
 apt-get clean
 
 log_step 3 "Stop desktop/RDP services before removing provision-time mounts"
+systemctl stop nginx.service appbox-rdp-download.service 2>/dev/null || true
 systemctl stop gnome-remote-desktop.service 2>/dev/null || true
 systemctl stop gdm3.service 2>/dev/null || true
 systemctl stop selkies-nginx.service selkies.service selkies-setup.service xvfb.service 2>/dev/null || true
@@ -152,6 +157,10 @@ rm -f /etc/gnome-remote-desktop/rdp-secret
 rm -f /var/lib/gnome-remote-desktop/.local/share/gnome-remote-desktop/rdp-tls.key
 rm -f /var/lib/gnome-remote-desktop/.local/share/gnome-remote-desktop/rdp-tls.crt
 rm -rf /var/lib/appbox-first-boot
+rm -f /etc/appbox-rdp-download/htpasswd /etc/appbox-rdp-download/auth
+rm -rf /var/lib/appbox-rdp-download
+rm -f /etc/nginx/sites-enabled/appbox-rdp-download /etc/nginx/sites-available/appbox-rdp-download
+systemctl disable nginx.service 2>/dev/null || true
 rm -f /tmp/user_pw
 
 log_step 6 "Restore appbox SSH access on rootfs after virtiofs home unmount"
@@ -191,8 +200,13 @@ install -d -m 1777 -o root -g root /tmp /var/tmp /tmp/.X11-unix
 log_step 9 "Validate template state"
 systemctl daemon-reload
 systemctl reset-failed
-systemd-analyze verify /etc/systemd/system/appbox-first-boot.service /etc/systemd/system/appbox-configure-gnome-rdp.service
-systemctl is-enabled appbox-first-boot.service appbox-configure-gnome-rdp.service gdm3.service gnome-remote-desktop.service
+install -d -m 0750 -o gnome-remote-desktop -g gnome-remote-desktop /etc/gnome-remote-desktop
+if [ -f /etc/gnome-remote-desktop/grd.conf ]; then
+  chown gnome-remote-desktop:gnome-remote-desktop /etc/gnome-remote-desktop/grd.conf
+  chmod 0664 /etc/gnome-remote-desktop/grd.conf
+fi
+systemd-analyze verify /etc/systemd/system/appbox-first-boot.service /etc/systemd/system/appbox-configure-gnome-rdp.service /etc/systemd/system/appbox-rdp-download.service
+systemctl is-enabled appbox-first-boot.service appbox-configure-gnome-rdp.service appbox-rdp-download.service gdm3.service gnome-remote-desktop.service
 systemctl --global is-enabled gnome-remote-desktop-handover.service 2>/dev/null || true
 sed -n '1,80p' /etc/fstab
 systemctl list-unit-files --type=mount --no-legend | awk '{print $1}' | awk '/^APPBOX_DATA\.mount$|^home-appbox\.mount$|^opt-cylo-config\.mount$|^etc-ssl-domains-.*\.mount$/' || true
