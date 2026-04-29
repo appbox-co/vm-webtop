@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Cleanup User Services
+Comment=Clean up conflicting user services after desktop startup
+Exec=/bin/bash -c "sleep 3 && /usr/local/bin/cleanup-user-services"
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+StartupNotify=false

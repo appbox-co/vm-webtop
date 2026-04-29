@@ -1,0 +1,23 @@
+[Unit]
+Description=Xvfb Virtual Display Server
+
+[Service]
+Type=simple
+User=appbox
+Group=appbox
+Environment=DISPLAY=:1
+Environment=DISPLAY_CDEPTH=24
+Environment=DISPLAY_DPI=96
+Environment=DRINODE=
+Environment=MAX_RES=7680x4320
+Environment=MAX_CLIENTS=2048
+Environment=DISABLE_ZINK=false
+ExecStartPre=+/usr/bin/install -d -m 1777 -o root -g root /tmp/.X11-unix
+ExecStart=/bin/bash -c 'VFBDEVICE=""; if [ -n "$DRINODE" ] && [ -r "$DRINODE" ]; then VFBDEVICE="$DRINODE"; fi; if [ -n "$VFBDEVICE" ]; then echo "xvfb: using explicit render node $VFBDEVICE"; exec /usr/bin/Xvfb $DISPLAY -screen 0 "${MAX_RES}x${DISPLAY_CDEPTH}" -dpi "$DISPLAY_DPI" -maxclients "$MAX_CLIENTS" +extension "COMPOSITE" +extension "DAMAGE" +extension "GLX" +extension "RANDR" +extension "RENDER" +extension "MIT-SHM" +extension "XFIXES" +extension "XTEST" +iglx +render -nolisten "tcp" -ac -noreset -vfbdevice "$VFBDEVICE"; else echo "xvfb: starting without -vfbdevice or -shmem"; exec /usr/bin/Xvfb $DISPLAY -screen 0 "${MAX_RES}x${DISPLAY_CDEPTH}" -dpi "$DISPLAY_DPI" -maxclients "$MAX_CLIENTS" +extension "COMPOSITE" +extension "DAMAGE" +extension "GLX" +extension "RANDR" +extension "RENDER" +extension "MIT-SHM" +extension "XFIXES" +extension "XTEST" +iglx +render -nolisten "tcp" -ac -noreset; fi'
+Restart=always
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=10
+
+[Install]
+# No WantedBy - this service is started by dependency chain 

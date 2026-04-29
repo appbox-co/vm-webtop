@@ -1,0 +1,14 @@
+[Unit]
+Description=Selkies Device and Permission Setup
+DefaultDependencies=no
+After=local-fs.target
+Before=selkies.service selkies-desktop.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash /etc/selkies/init-device-setup.sh
+TimeoutStartSec=30
+
+[Install]
+WantedBy=multi-user.target 

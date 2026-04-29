@@ -1,0 +1,5 @@
+# shellcheck shell=bash disable=SC2034
+# HTTPS endpoint for downloading the generated .rdp profile.
+RDP_DOWNLOAD_USERNAME=appbox
+# Optional override for the host written into the .rdp file. Defaults to hostname -f.
+# RDP_FILE_HOSTNAME=example.appboxes.co

@@ -19,4 +19,5 @@ if ! pgrep -x chromium >/dev/null 2>&1 && ! pgrep -f snap/chromium >/dev/null 2>
     rm -f "${HOME}/.config/chromium/SingletonLock" "${HOME}/.config/chromium/SingletonSocket" "${HOME}/.config/chromium/SingletonCookie" 2>/dev/null || true
 fi
 
+unset LD_PRELOAD SELKIES_INTERPOSER
 exec "${BIN}" --no-first-run --password-store=basic --no-sandbox --test-type "$@"

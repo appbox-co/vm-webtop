@@ -22,7 +22,7 @@ When your scripts run, they have access to:
 - All functions from the main `install.sh` script
 - Standard system environment
 - The `appbox` user has been created and configured
-- The `desktop` component (GNOME + GDM + GNOME Remote Desktop) has been installed
+- The `desktop` and `selkies` components have been installed
 
 ## Examples
 

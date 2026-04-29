@@ -1,0 +1,13 @@
+[Unit]
+Description=Reset Appbox snap mount namespaces
+After=local-fs.target snapd.service
+Before=selkies-desktop.service
+Wants=snapd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/appbox-reset-snap-namespaces.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

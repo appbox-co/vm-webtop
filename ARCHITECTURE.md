@@ -1,68 +1,63 @@
-# Architecture: Ubuntu VM GNOME + RDP (GNOME Remote Desktop)
+# Architecture: KDE Plasma on Selkies
 
-This repository installs a **full GNOME desktop** on Ubuntu **24.04 (noble)** or **26.04 (resolute)** with **GDM** and **GNOME Remote Desktop** in **system / headless** mode so users can connect with **Windows Remote Desktop (mstsc)** before logging in at the GDM screen (“Remote Login”).
+This image runs KDE Plasma in a virtual X11 display and streams it with Selkies. This replaces the KRDP/Wayland direction because KRDP currently has poor cursor behavior and no reliable dynamic resolution path for this VM use case.
 
-The previous **Selkies + Xvfb + browser streaming** stack has been removed.
+## Directory Layout
 
-## Directory layout
-
-```
+```text
 vm_images/
-├── install.sh              # Master installer (validation, kernel helper, desktop component)
+├── install.sh              # Master installer: desktop + selkies
 ├── desktop/
-│   ├── install.sh          # APT: ubuntu-desktop-minimal, GRD, snaps, polkit, dconf, systemd
-│   └── rootfs/             # Files merged to / (see below)
+│   ├── install.sh          # KDE packages, appbox user, app provisioning
+│   └── rootfs/             # First-boot, polkit, Chromium, wallpaper files
+├── selkies/
+│   ├── install.sh          # Selkies, Xvfb, nginx, PulseAudio, WebRTC stack
+│   └── rootfs/             # Selkies services and desktop startup scripts
 ├── testing/
-│   ├── test-framework.sh   # Optional test harness (run on an installed VM as root)
-│   ├── component/
-│   └── integration/
-├── custom-rootfs/          # (optional) extra files copied by master install — see README
-└── custom-scripts/         # (optional) post-install hooks — see README
+├── custom-rootfs/
+└── custom-scripts/
 ```
 
-## Runtime flow
+## Runtime Flow
 
-1. **Boot** reaches `multi-user.target`; **`appbox-first-boot.service`** runs after **`cloud-config.service`** (cloud-init `write_files`) and before GRD configuration:
-   - Reads **`RDP_PORT`** from the service environment (**`/etc/environment`** or **`/etc/default/appbox-first-boot`**) and persists it into **`/etc/default/gnome-remote-desktop-appbox`**.
-   - If **`/tmp/user_pw`** exists, applies it to the Linux **`appbox`** user and stores the same value in **`/etc/gnome-remote-desktop/rdp-secret`** for the first RDP handshake, then removes the file.
-   - Optionally sends a one-time installed callback when **`APPBOX_INSTALLED_CALLBACK_URL`** (or **`APPBOX_CALLBACK_URL`** / **`APPBOX_API_CALLBACK_URL`**) is set.
-2. **Boot** reaches `graphical.target`; **GDM** starts the greeter (no local monitor required for RDP path).
-3. **`appbox-configure-gnome-rdp.service`** (oneshot, `After=appbox-first-boot.service`, `Before=gnome-remote-desktop.service`) runs **`/usr/local/sbin/appbox-configure-gnome-rdp.sh`**:
-   - Sources **`/etc/default/gnome-remote-desktop-appbox`** for **`RDP_PORT`**, **`GRD_RDP_USERNAME`** (default **`appbox`**), and optional **`GRD_RDP_PASSWORD`**.
-   - Ensures TLS material under **`/var/lib/gnome-remote-desktop/.local/share/gnome-remote-desktop/`** with **OpenSSL** (SAN includes **`hostname`**, default route **IPv4**, and optional **`RDP_TLS_EXTRA_SAN`**) when **`openssl`** is present; otherwise **`winpr-makecert`**. Set **`RDP_TLS_CN`**, **`RDP_TLS_EXTRA_SAN`**, and one-shot **`RDP_TLS_REGEN=1`** so **Windows mstsc** sees a cert that matches the public **DNS/IP** clients use (see **`testing/docs/DEPLOYMENT_GUIDE.md`**).
-   - Applies settings with **`grdctl --system`** (`set-tls-*`, `set-port`, `set-credentials`, `enable`).
-   - If **`GRD_RDP_PASSWORD`** is unset, a random password is written once to **`/etc/gnome-remote-desktop/rdp-secret`** (mode `0600`).
-4. **`gnome-remote-desktop.service`** listens on **`RDP_PORT`** (default **3389** in the shipped defaults file).
-5. The user connects with an RDP client using the **system RDP credentials**, then authenticates on **GDM** as **`appbox`** (or another local user).
+1. `appbox-first-boot.service` runs after cloud-init:
+   - Sets the `appbox` password from `/tmp/user_pw` if present.
+   - Sends the optional installed callback.
+2. `selkies-setup.service` prepares devices and permissions.
+3. `xvfb.service` starts the virtual X11 display on `:1`.
+4. `selkies-pulseaudio.service` starts audio for the virtual desktop.
+5. `selkies-nginx.service` exposes the web UI at `/vnc/` on HTTPS port `443` with `proxy_protocol` and the platform domain certificate when present.
+6. `selkies.service` starts the WebRTC streamer with `SELKIES_ENABLE_RESIZE=true`.
+7. `selkies-desktop.service` runs `/etc/selkies/svc-de.sh`, which starts `startplasma-x11` inside `DISPLAY=:1`.
 
-**RDP client expectations:** The **system / headless** (“Remote Login”) path is defined around **Windows `mstsc.exe`** behaviour: after GDM, the server uses **server redirection** and **one-time** credentials. **macOS** and many **third-party** RDP clients often **fail after login** (black screen, then disconnect) even when the first hop and GDM work — same class of issue as [GNOME/gnome-remote-desktop#215](https://gitlab.gnome.org/GNOME/gnome-remote-desktop/-/issues/215). For a reliable experience, use **`mstsc`** from Windows (or a Windows VM). Details: **`testing/docs/DEPLOYMENT_GUIDE.md`**.
+## Desktop Component
 
-**`polkitd` / `pkexec`** are required so **`grdctl --system`** can talk to the polkit-backed configuration path.
+The `desktop` component installs the KDE payload and user-facing applications. It does not provide remote access directly.
 
-## Desktop component (`desktop/`)
+Key packages:
 
-| Area | Role |
-|------|------|
-| **Packages** | `ubuntu-desktop-minimal`, `gnome-remote-desktop`, `winpr-utils`, `polkitd`, `pkexec`, `mousepad`, `gnome-software` + snap/flatpak plugins, `flatpak`, `snapd`; **Chromium** and **Snap Store** via snap. |
-| **Polkit** | `etc/polkit-1/rules.d/50-snap-appbox.rules`, `50-flatpak-appbox.rules` so user **`appbox`** can use snap/flatpak from the session. |
-| **Wallpaper** | `appbox.svg` under **`/usr/share/backgrounds/appbox/`**; dconf keyfiles under **`/etc/dconf/db/local.d/`** and **`/etc/dconf/db/gdm.d/`** (run **`dconf update`** after install). |
-| **Chromium** | **`/usr/local/bin/wrapped-chromium`** and **`/usr/bin/chromium`** wrapper; `.desktop` files patched where present to call the wrapper. |
-| **User** | **`appbox`** created if missing, in group **`sudo`**, with **`~/.local/share/flatpak`** prepared; **flathub** added for **`appbox`** (user remote). |
+- `kde-plasma-desktop`
+- `plasma-session-x11` and `kwin-x11` when available
+- `plasma-nm`, `plasma-pa`, `plasma-discover`
+- `konsole`, `dolphin`, `kate`, `kde-spectacle`
+- `flatpak`, `snapd`, Chromium wrapper support
 
-## Master installer (`install.sh`)
+## Selkies Component
 
-- Validates Ubuntu **noble** or **resolute**, memory/disk, network, systemd.
-- Optional **kernel 6.14** path for virtiofs `execv` issues (unchanged behaviour).
-- **`configure_apt_release_verification`**: optional apt sandbox tweak for some minimal images.
-- Installs the **`desktop`** component only.
-- Copies **`custom-rootfs/`** and runs **`custom-scripts/`** if present.
+The `selkies` component owns remote access:
 
-## Testing
+- Xvfb virtual display with RANDR enabled
+- Selkies GStreamer/WebRTC streamer
+- Dynamic resize through `SELKIES_ENABLE_RESIZE=true`
+- Cursor rendering via XFixes/DataChannel rather than KDE Wayland cursor metadata
+- Nginx HTTPS front end on the base hostname, with websocket proxying at `/vnc/websocket`
+- PulseAudio for desktop audio
 
-Post-install on the VM (as **root**): **`sudo ./testing/test-framework.sh`**. Tests assume the **`desktop`** component is installed and enabled.
+The initial display size is `1920x1080`, but Selkies can resize the virtual display to match the browser window.
 
-## Security notes
+## Security Notes
 
-- **System RDP credentials** are only for reaching GDM; users still need a **local Unix password** (or your auth setup) at login.
-- Rotate **`/etc/gnome-remote-desktop/rdp-secret`** or set **`GRD_RDP_PASSWORD`** in **`/etc/default/gnome-remote-desktop-appbox`** for production.
-- Expose **`RDP_PORT`** only through your platform’s firewall / port mapping.
+- Selkies is exposed through HTTPS on port `443` by default.
+- The `appbox` Linux user remains the primary desktop user.
+- Snap/Flatpak polkit rules allow `appbox` to manage app stores from inside the desktop.
+- `custom-rootfs/` and `custom-scripts/` run after components, so deployments can override service ports or add hardening.

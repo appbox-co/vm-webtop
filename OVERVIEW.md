@@ -1,67 +1,56 @@
-# Overview: Ubuntu VM Images — GNOME + RDP
+# Overview: Ubuntu VM Images — KDE Plasma on Selkies
 
 ## Goal
 
-Provide a **script-driven** image setup for Ubuntu **24.04** or **26.04** that delivers:
+Provide a script-driven Ubuntu **24.04** or **26.04** image that runs **KDE Plasma** inside a **Selkies WebRTC** remote desktop session.
 
-- **GNOME** (via **`ubuntu-desktop-minimal`**)
-- **GDM** graphical login
-- **GNOME Remote Desktop** with **RDP** in **system (headless / Remote Login)** mode, compatible with **Windows Remote Desktop**
-- The same **Appbox-style wallpaper**, **Chromium** (snap + wrapper), **mousepad**, **Snap Store**, **GNOME Software** with **snap** and **flatpak** support, and **polkit** rules so user **`appbox`** can manage snaps and flatpaks
+The remote desktop is browser-based rather than RDP-based:
 
-## What was removed
+- **Selkies + GStreamer + WebRTC** serves the desktop over HTTPS.
+- **Xvfb** provides a virtual X11 display with RANDR support for dynamic browser resizing.
+- **KDE Plasma** runs via `startplasma-x11` inside that virtual display.
+- **Selkies cursor support** uses XFixes/DataChannel cursor updates, avoiding the KRDP/KDE Wayland cursor capture issues.
 
-The old **LinuxServer.io-style** stack (**Selkies** in the browser, **Xvfb**, **nginx**, Pulse/WebRTC streaming, **GNOME Flashback** on a virtual X server) is **gone**. Access is **native RDP** only.
+## Installed Desktop
 
-## First-boot provisioning
+- KDE Plasma via `kde-plasma-desktop`
+- Plasma X11 session support when available (`plasma-session-x11`, `kwin-x11`)
+- KDE apps: Konsole, Dolphin, Kate, Spectacle, Discover
+- Snap and Flatpak integration for the `appbox` user
+- Chromium wrapper and Appbox wallpaper
 
-On boot, **`appbox-first-boot.service`** reads **`RDP_PORT`** from the systemd service environment (including **`/etc/environment`** and **`/etc/default/appbox-first-boot`**) and writes it into **`/etc/default/gnome-remote-desktop-appbox`** before GNOME Remote Desktop is configured.
+## Remote Access
 
-If **`/tmp/user_pw`** exists, the service applies it to the Linux **`appbox`** user and stores the same password as GNOME Remote Desktop’s first-hop RDP secret, then deletes the file. See **`testing/docs/DEPLOYMENT_GUIDE.md`** for details.
-
-## Quick start
-
-On a fresh Ubuntu **noble** or **resolute** VM (run as **root**):
+The master installer installs two components:
 
 ```bash
 sudo ./install.sh
 ```
 
-Single component:
+Components can also be run individually:
 
 ```bash
 sudo ./install.sh --component desktop
+sudo ./install.sh --component selkies
 ```
 
-## RDP port and credentials
+After installation, open the Selkies web UI at `/vnc/` on the VM's HTTPS hostname. The generated nginx config listens on **443** with `proxy_protocol`, serves Selkies from `/vnc`, and uses the platform certificate under `/etc/ssl/domains/` when present.
 
-- Export **`RDP_PORT`** into **`/etc/environment`** or **`/etc/default/appbox-first-boot`** before first boot; **`appbox-first-boot.service`** persists it for the GRD configure service.
-- **`GRD_RDP_USERNAME`** defaults to **`appbox`** for the **first** RDP handshake (GDM login screen).
-- If **`/tmp/user_pw`** exists on first boot, the Linux **`appbox`** password and first-hop RDP password are set to that value. Otherwise, **`GRD_RDP_PASSWORD`** or the persistent random secret in **`/etc/gnome-remote-desktop/rdp-secret`** is used.
+## First Boot
 
-Example for a port-forwarded lab host (external port **18691**):
+`appbox-first-boot.service` handles VM provisioning:
 
-```bash
-echo 'RDP_PORT=18691' | sudo tee /etc/default/appbox-first-boot
-sudo systemctl restart appbox-first-boot.service appbox-configure-gnome-rdp.service gnome-remote-desktop.service
-```
-
-Then connect with **mstsc** to **`host:18691`** (or your mapped hostname/port).
-
-## Microsoft Remote Desktop: no login UI / **0x4** (Windows **or** Mac)
-
-GNOME **Remote Login** uses **Server Redirection**. Put **`use redirection server name:i:1`** in your **`.rdp`** file (Windows **mstsc** *Save As*, or Mac **Import from RDP file** / an **`rdp://`** URI). Microsoft’s docs list that flag for **Mac** as well. Details: **`testing/docs/DEPLOYMENT_GUIDE.md`** (and the SUSE GNOME headless article linked there).
-
-**Mac / third-party RDP:** Even with a correct **`.rdp`**, many **macOS** clients (Microsoft **Windows App**, **Royal TSX**, **Remote Desktop Manager**, etc.) still **drop after GDM** with a black screen — they often mishandle the same **post-login redirection** as each other. **Windows `mstsc`** remains the supported path; see **`testing/docs/DEPLOYMENT_GUIDE.md`** § **D** for workarounds (e.g. small **Windows VM** on the Mac to run **mstsc**).
+- If `/tmp/user_pw` exists, it sets the Linux password for `appbox`, then deletes the file.
+- If `APPBOX_INSTALLED_CALLBACK_URL` is set, it sends a one-time installed callback.
 
 ## Customization
 
-- **`custom-rootfs/`**: files merged on top of `/` after the main install (see **`custom-rootfs/README.md`**).
-- **`custom-scripts/`**: executable scripts run in sorted order (see **`custom-scripts/README.md`**).
+- `custom-rootfs/`: files merged on top of `/` after component installation.
+- `custom-scripts/`: executable scripts run in sorted order after installation.
 
 ## Documentation
 
-- **`ARCHITECTURE.md`** — components and boot order  
-- **`testing/docs/DEPLOYMENT_GUIDE.md`** — operations and troubleshooting  
-- **`testing/docs/TESTING_GUIDE.md`** — test harness  
-- **`CHANGELOG.md`** — history  
+- `ARCHITECTURE.md`: components and boot order
+- `testing/docs/DEPLOYMENT_GUIDE.md`: deployment notes
+- `testing/docs/TESTING_GUIDE.md`: validation harness
+- `CHANGELOG.md`: history

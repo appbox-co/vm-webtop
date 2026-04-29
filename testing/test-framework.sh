@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# Ubuntu VM Images - GNOME RDP - Testing Framework
-# Phase 5: Integration and Testing
+# Ubuntu VM Images - KDE Plasma on Selkies - Testing Framework
 # =============================================================================
 
 set -euo pipefail
@@ -43,11 +42,11 @@ log_test() { echo -e "${CYAN}[TEST]${NC} $1" | tee -a "$TEST_LOG_DIR/test.log"; 
 # =============================================================================
 
 init_test_framework() {
-    log_info "Initializing test framework..."
-    
     # Create test directories
     mkdir -p "$TEST_LOG_DIR"
     find "$TEST_LOG_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+    log_info "Initializing test framework..."
     
     # Initialize test results
     cat > "$TEST_RESULTS_FILE" << 'EOF'
@@ -233,7 +232,7 @@ generate_test_report() {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Ubuntu VM Images - GNOME RDP - Test Report</title>
+    <title>Ubuntu VM Images - KDE Selkies - Test Report</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .header { background: #f0f0f0; padding: 20px; border-radius: 5px; }
@@ -251,7 +250,7 @@ generate_test_report() {
 </head>
 <body>
     <div class="header">
-        <h1>Ubuntu VM Images - GNOME RDP - Test Report</h1>
+        <h1>Ubuntu VM Images - KDE Selkies - Test Report</h1>
         <p><strong>Test Run:</strong> $start_time</p>
         <p><strong>Duration:</strong> ${duration}s</p>
         <p><strong>Generated:</strong> $(date)</p>
@@ -343,7 +342,7 @@ EOF
 
 show_help() {
     cat << EOF
-Ubuntu VM Images - GNOME RDP - Testing Framework
+Ubuntu VM Images - KDE Plasma on Selkies - Testing Framework
 
 Usage: $0 [OPTIONS] [CATEGORY]
 

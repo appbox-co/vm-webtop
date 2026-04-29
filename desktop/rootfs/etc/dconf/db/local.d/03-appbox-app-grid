@@ -1,2 +1,0 @@
-[org/gnome/shell]
-app-picker-layout=[{'org.gnome.Terminal.desktop': <{'position': <0>}>, 'org.gnome.Nautilus.desktop': <{'position': <1>}>, 'chromium.desktop': <{'position': <2>}>, 'org.xfce.mousepad.desktop': <{'position': <3>}>, 'appbox-app-center.desktop': <{'position': <4>}>, 'org.gnome.Settings.desktop': <{'position': <5>}>}]

@@ -1,45 +1,25 @@
 #!/bin/bash
-# First-boot provisioning hooks for Appbox templates.
+# First-boot provisioning hooks for Appbox KDE/Selkies templates.
 set -euo pipefail
 
-ENV_FILE=/etc/default/gnome-remote-desktop-appbox
-RDP_SECRET_FILE=/etc/gnome-remote-desktop/rdp-secret
 STATE_DIR=/var/lib/appbox-first-boot
 CALLBACK_STAMP="${STATE_DIR}/installed-callback.done"
+RDP_DOWNLOAD_HTPASSWD_FILE=/etc/appbox-rdp-download/htpasswd
 
 log() {
     echo "appbox-first-boot: $*"
 }
 
-shell_quote() {
-    local value="$1"
-    printf "'%s'" "${value//\'/\'\\\'\'}"
-}
-
-set_env_value() {
-    local key="$1"
-    local value="$2"
-    local quoted
-    quoted="$(shell_quote "$value")"
-    install -d -m 0755 -o root -g root "$(dirname "$ENV_FILE")"
-    touch "$ENV_FILE"
-    if grep -qE "^[#[:space:]]*${key}=" "$ENV_FILE"; then
-        sed -i -E "s|^[#[:space:]]*${key}=.*|${key}=${quoted}|" "$ENV_FILE"
-    else
-        printf '%s=%s\n' "$key" "$quoted" >>"$ENV_FILE"
-    fi
-}
-
-configure_rdp_port() {
-    if [[ -z "${RDP_PORT:-}" ]]; then
+configure_rdp_download_auth() {
+    local pw="$1"
+    if [[ -z "$pw" ]]; then
         return 0
     fi
-    if ! [[ "$RDP_PORT" =~ ^[0-9]+$ ]] || ((RDP_PORT < 1 || RDP_PORT > 65535)); then
-        log "Ignoring invalid RDP_PORT=${RDP_PORT}"
-        return 0
-    fi
-    log "Setting RDP_PORT=${RDP_PORT}"
-    set_env_value RDP_PORT "$RDP_PORT"
+
+    install -d -m 0750 -o root -g www-data "$(dirname "$RDP_DOWNLOAD_HTPASSWD_FILE")"
+    printf 'appbox:%s\n' "$(openssl passwd -apr1 "$pw")" >"$RDP_DOWNLOAD_HTPASSWD_FILE"
+    chown root:www-data "$RDP_DOWNLOAD_HTPASSWD_FILE"
+    chmod 640 "$RDP_DOWNLOAD_HTPASSWD_FILE"
 }
 
 configure_appbox_password() {
@@ -59,14 +39,7 @@ configure_appbox_password() {
 
     log "Setting appbox Linux password from $pw_file"
     printf 'appbox:%s\n' "$pw" | chpasswd
-
-    # Keep the first RDP prompt aligned with the GDM appbox login. The file is
-    # already treated as the persistent GRD secret by appbox-configure-gnome-rdp.
-    install -d -m 0755 -o root -g root "$(dirname "$RDP_SECRET_FILE")"
-    umask 077
-    printf '%s' "$pw" >"$RDP_SECRET_FILE"
-    umask 022
-    chmod 600 "$RDP_SECRET_FILE"
+    configure_rdp_download_auth "$pw"
 }
 
 callback_url() {
@@ -108,8 +81,6 @@ send_installed_callback() {
 }
 
 main() {
-    set_env_value GRD_RDP_USERNAME appbox
-    configure_rdp_port
     configure_appbox_password
     send_installed_callback
 }

@@ -1,15 +1,10 @@
-# Testing guide
+# Testing Guide
 
 ## Scope
 
-Tests target a VM where **`sudo ./install.sh`** (or **`sudo ./install.sh --component desktop`**) has **already** completed successfully.
+Tests target a VM where `sudo ./install.sh` has completed successfully.
 
-## Requirements
-
-- Run the harness as **root** (it checks **`EUID`**).
-- Ubuntu **24.04** or **26.04** recommended.
-
-## Running the suite
+## Running the Suite
 
 ```bash
 cd /path/to/vm_images
@@ -24,22 +19,20 @@ sudo ./testing/test-framework.sh -c integration
 sudo ./testing/test-framework.sh -l
 ```
 
-Results and HTML report default under **`/tmp/vm-images-tests/`**.
+Results and HTML output are written under `/tmp/vm-images-tests/`.
 
-## What is covered
+## Coverage
 
 | Script | Intent |
 |--------|--------|
-| **`testing/component/test_desktop_installation.sh`** | Packages present, **`appbox`** user, required systemd units enabled, configure script and defaults file on disk. |
-| **`testing/integration/test_end_to_end.sh`** | **`grdctl --system status`** succeeds; optional **`ss`** check for **`RDP_PORT`** from **`/etc/default/gnome-remote-desktop-appbox`**. |
+| `testing/component/test_desktop_installation.sh` | Confirms KDE Plasma packages, X11 session support when available, `appbox`, and first-boot provisioning. |
+| `testing/component/test_selkies_installation.sh` | Confirms Selkies packages, Xvfb, services, `/etc/selkies/` scripts, resize environment, and Plasma desktop startup. |
+| `testing/integration/test_end_to_end.sh` | Smoke-checks that Selkies is configured to start Plasma and that HTTPS port `443` is listening when services are active. |
 
-## Manual checks (recommended)
+## Manual Checks
 
-1. From another machine: **RDP** to **`host:$RDP_PORT`** with the system RDP password.
-2. Complete **GDM** login as **`appbox`**.
-3. Launch **GNOME Software**, **Snap Store**, **Chromium**, **mousepad**.
-4. Confirm wallpaper matches **`/usr/share/backgrounds/appbox/appbox.svg`**.
-
-## Continuous integration
-
-The repository does not ship a CI matrix by default; run **`test-framework.sh`** on a disposable VM after changes to **`desktop/install.sh`** or **`desktop/rootfs/`**.
+1. Open the Selkies web desktop over HTTPS.
+2. Confirm KDE Plasma loads inside the browser.
+3. Resize the browser window and confirm the remote desktop adapts.
+4. Confirm the cursor is visible and input works.
+5. Launch KDE Discover, Chromium, Kate, Konsole, and Dolphin.

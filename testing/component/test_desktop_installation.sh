@@ -1,20 +1,20 @@
 #!/bin/bash
-# TEST_DESCRIPTION: Verifies GNOME + GDM + GNOME Remote Desktop packages and units
+# TEST_DESCRIPTION: Verifies KDE Plasma packages for Selkies desktop sessions
 set -euo pipefail
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
-dpkg -s ubuntu-desktop-minimal &>/dev/null || fail "ubuntu-desktop-minimal not installed"
-dpkg -s gnome-remote-desktop &>/dev/null || fail "gnome-remote-desktop not installed"
-dpkg -s gdm3 &>/dev/null || fail "gdm3 not installed"
-command -v grdctl &>/dev/null || fail "grdctl not in PATH"
+dpkg -s kde-plasma-desktop &>/dev/null || fail "kde-plasma-desktop not installed"
+if apt-cache show plasma-session-x11 >/dev/null 2>&1; then
+    dpkg -s plasma-session-x11 &>/dev/null || fail "plasma-session-x11 not installed"
+fi
 id appbox &>/dev/null || fail "appbox user missing"
 
-systemctl is-enabled gdm3 &>/dev/null || fail "gdm3 not enabled"
-systemctl is-enabled gnome-remote-desktop.service &>/dev/null || fail "gnome-remote-desktop not enabled"
-systemctl is-enabled appbox-configure-gnome-rdp.service &>/dev/null || fail "appbox-configure-gnome-rdp not enabled"
+systemctl is-enabled appbox-first-boot.service &>/dev/null || fail "appbox-first-boot not enabled"
+systemctl is-enabled appbox-reset-snap-namespaces.service &>/dev/null || fail "snap namespace reset not enabled"
 
-[[ -x /usr/local/sbin/appbox-configure-gnome-rdp.sh ]] || fail "configure script missing"
-[[ -f /etc/default/gnome-remote-desktop-appbox ]] || fail "default RDP config missing"
+[[ -x /usr/local/sbin/appbox-first-boot.sh ]] || fail "first boot script missing"
+[[ -x /usr/local/sbin/appbox-apply-kde-defaults.sh ]] || fail "KDE defaults script missing"
+[[ -x /usr/local/sbin/appbox-reset-snap-namespaces.sh ]] || fail "snap namespace reset script missing"
 
 exit 0

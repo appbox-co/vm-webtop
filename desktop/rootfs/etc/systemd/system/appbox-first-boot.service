@@ -1,10 +1,8 @@
 [Unit]
 Description=Appbox first-boot provisioning
-# cloud-init write_files runs in the config stage. Waiting for cloud-final is
-# too late and can create an ordering cycle with desktop/RDP services.
 After=cloud-config.service network-online.target
 Wants=cloud-config.service network-online.target
-Before=appbox-configure-gnome-rdp.service gnome-remote-desktop.service
+Before=selkies-setup.service selkies.service selkies-desktop.service appbox-rdp-download.service
 
 [Service]
 Type=oneshot

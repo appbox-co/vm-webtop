@@ -1,0 +1,39 @@
+[Unit]
+Description=Selkies GStreamer Remote Desktop
+After=selkies-nginx.service selkies-pulseaudio.service selkies-setup.service
+Wants=selkies-nginx.service
+Requires=selkies-pulseaudio.service selkies-setup.service
+
+[Service]
+Type=simple
+User=appbox
+Group=appbox
+Environment=HOME=/config
+Environment=DISPLAY=:1
+Environment=GST_DEBUG=*:1
+Environment=SELKIES_ENCODER=x264enc
+Environment=SELKIES_FRAMERATE=60
+Environment=SELKIES_ENABLE_RESIZE=true
+Environment=SELKIES_USE_CSS_SCALING=true
+Environment=SELKIES_SCALING_DPI=96,120,144,168,192,216,240,264,288
+Environment=DISPLAY_SIZEW=1920
+Environment=DISPLAY_SIZEH=1080
+Environment=DISPLAY_REFRESH=60
+Environment=DISPLAY_DPI=96
+Environment=DISPLAY_CDEPTH=24
+Environment=SELKIES_INTERPOSER=/usr/lib/selkies_joystick_interposer.so
+Environment=LD_PRELOAD=/usr/lib/selkies_joystick_interposer.so:/opt/lib/libudev.so.1.0.0-fake
+Environment=PULSE_SERVER=unix:/run/user/1000/pulse/native
+Environment="TITLE=Appbox KDE"
+Environment=DEV_MODE=
+ExecStartPre=/bin/bash /etc/selkies/init-selkies-config.sh
+ExecStartPre=/bin/bash -c 'until xdpyinfo -display :1 >/dev/null 2>&1; do echo "Waiting for X server..."; sleep 1; done'
+ExecStartPre=/bin/bash -c 'for i in {1..60}; do PULSE_SERVER=unix:/run/user/1000/pulse/native pactl info >/dev/null 2>&1 && exit 0; echo "Waiting for PulseAudio..."; sleep 0.5; done; exit 1'
+ExecStart=/bin/bash -c 'rm -rf "${HOME}/.cache/gstreamer-1.0"; exec selkies'
+WorkingDirectory=/config
+Restart=always
+RestartSec=5
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target 
