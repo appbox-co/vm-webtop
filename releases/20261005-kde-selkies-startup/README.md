@@ -29,7 +29,8 @@ are already copied with preserved ownership. Existing user data is retained.
 5. With qemu-utils and libguestfs tools on the builder, run
    `sudo bash releases/20261005-kde-selkies-startup/build-image.sh BASE_IMAGE OUTPUT_DIRECTORY`.
    The script copies the template, installs only the committed startup script,
-   verifies its hash, checks qcow2 integrity, and preserves the virtual size.
+   runs the Selkies component checks in the image, verifies its hash, checks
+   qcow2 integrity, and preserves the virtual size.
    Without KVM, use `LIBGUESTFS_BACKEND=direct LIBGUESTFS_BACKEND_SETTINGS=force_tcg`.
 6. Transfer the finished image to a temporary filename on seed server 578.
    Verify its checksum and permissions before moving it to the new image name.

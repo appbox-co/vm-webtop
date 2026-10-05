@@ -21,7 +21,8 @@ qemu-img convert -f qcow2 -O qcow2 -S 4k "$base_image" "$build_dir/image.img"
 virt-customize --no-network -a "$build_dir/image.img" \
     --copy-in "$source_file:/etc/selkies" \
     --chmod 0755:/etc/selkies/init-selkies-config.sh \
-    --chown 0:0:/etc/selkies/init-selkies-config.sh
+    --chown 0:0:/etc/selkies/init-selkies-config.sh \
+    --run "$repo_dir/testing/component/test_selkies_installation.sh"
 actual_sha=$(virt-cat -a "$build_dir/image.img" /etc/selkies/init-selkies-config.sh | sha256sum | cut -d' ' -f1)
 [[ "$actual_sha" == "$new_sha" ]]
 qemu-img check "$build_dir/image.img"

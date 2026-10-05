@@ -223,10 +223,11 @@ test_selkies_user() {
 test_selkies_environment() {
     log_info "Testing selkies environment variables..."
     
-    # Check if environment variables are set
+    # Cloud-init can replace /etc/environment. Selkies also declares these
+    # settings in its systemd unit, including the PulseAudio socket it uses.
     local env_vars=(
         "DISPLAY=:1"
-        "PULSE_RUNTIME_PATH=/run/user/1000/pulse"
+        "PULSE_SERVER=unix:/run/user/1000/pulse/native"
         "SELKIES_INTERPOSER=/usr/lib/selkies_joystick_interposer.so"
         "SELKIES_ENABLE_RESIZE=true"
         "SELKIES_USE_CSS_SCALING=true"
@@ -236,7 +237,7 @@ test_selkies_environment() {
     )
     
     for env_var in "${env_vars[@]}"; do
-        if ! grep -q "$env_var" /etc/environment; then
+        if ! grep -Fq "$env_var" /etc/environment /etc/systemd/system/selkies.service; then
             log_fail "Environment variable not found: $env_var"
             return $FAIL
         fi
