@@ -1,5 +1,11 @@
 # Changelog: Ubuntu VM Images
 
+## KDE image update — 2026-10-05
+
+- Fixed remote desktop startup timeouts when the persistent home directory
+  contains many files. Selkies now sets ownership on the directories it creates
+  without recursively scanning existing user files.
+
 ## 3.1.0 — KDE Plasma on Selkies — 2026-04
 
 ### Breaking Changes

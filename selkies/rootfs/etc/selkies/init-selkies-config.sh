@@ -28,7 +28,9 @@ fi
 # Plasma folder-view must have a real Desktop directory on first boot; without
 # it, the model can briefly show stale home-folder entries such as snap/.
 mkdir -p /home/appbox/Desktop /config/Desktop
-chown -R appbox:appbox /home/appbox /config 2>/dev/null || true
+# Defaults are copied with their ownership above. Do not walk existing user
+# files here: a populated virtiofs home can exceed the service startup timeout.
+chown appbox:appbox /home/appbox /config /home/appbox/Desktop /config/Desktop 2>/dev/null || true
 if [[ -x /usr/local/sbin/appbox-apply-kde-defaults.sh ]]; then
   HOME=/config /usr/local/sbin/appbox-apply-kde-defaults.sh || echo "Warning: Could not apply KDE defaults"
 fi
