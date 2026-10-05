@@ -3,15 +3,27 @@
 app:
   display_name: Coolify VPS
   publisher: Coollabs
+  description: |
+    ## Deploy applications on your own VPS
+
+    Coolify manages application deployments, databases and services inside an Ubuntu 26.04 virtual machine.
+
+    ### Getting started
+
+    Sign in with the administrator email and password chosen during installation. Add each project hostname to this VM in Appbox and configure the same hostname in Coolify.
+
+    ### Updates and backups
+
+    This admin-only preview uses Coolify 4.3.23. Automatic updates are disabled while the package is tested. Back up the VM and `/data/coolify` before making changes.
   admin_only: true
   categories: [16, 27, 29]
   type: vm
 image:
-  name: coolify-ubuntu-26.04-4.3.23-c315a7b072ea.qcow2
-  version: 4.3.23 / Ubuntu 26.04
-  tag: 4.3.23-ubuntu26.04-c315a7b
-  sha256: f39eaf3870e756b7884c69f0c21325ff8901de1699c9b8c63ace237be10cc7b9
-  source_commit: c315a7b072ea38b04e8f1716e4b09bfe962990ae
+  name: coolify-ubuntu-26.04-4.3.23-78efef59c0b8.qcow2
+  version: 4.3.23 / Ubuntu 26.04 r2
+  tag: 4.3.23-ubuntu26.04-78efef5
+  sha256: db7fe4a981404aa565f6e5a6407e40cc7976f9ea1d90086a92149149ff2230cb
+  source_commit: 78efef59c0b864d28049944d6c82c8829611b557
 container:
   memory: 8
   memory_swap: 8
@@ -26,6 +38,7 @@ networking:
   subdomain: coolify
 behavior:
   app_slots: 8
+  allow_multiple: true
   expect_callback: true
   callback_requires_auth: true
   can_update: false
