@@ -1,0 +1,123 @@
+#!/usr/bin/python3
+"""Control the desktop on builder VM 254280 only."""
+
+import argparse
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+
+BUILDER_UUID = "2358362c-c6d3-48a8-b8d5-4c0fe244a4d4"
+STATE = Path("/var/lib/appbox-builder-desktop")
+MARKER = STATE / "enabled"
+SYSTEM_UNITS = [
+    "selkies-desktop.service", "selkies.service", "selkies-nginx.service",
+    "selkies-pulseaudio.service", "selkies-setup.service", "xvfb.service",
+    "sddm.service", "nginx.service", "appbox-rdp-download.service",
+]
+BOOT_UNITS = ["selkies-setup.service", "selkies.service", "selkies-desktop.service"]
+USER_PATTERNS = [
+    "plasma*.service", "plasma*.target", "kde-*.service",
+    "graphical-session*.target", "xdg-desktop-autostart.target",
+    "pipewire*.service", "pipewire*.socket", "wireplumber.service",
+    "pulseaudio*.service", "pulseaudio*.socket",
+    "xdg-desktop-portal*.service", "xdg-document-portal.service",
+    "xdg-permission-store.service", "at-spi-dbus-bus.service",
+]
+
+
+def ctl(*args, user=False):
+    prefix = ["/usr/bin/systemctl"]
+    if user:
+        prefix = [
+            "/usr/sbin/runuser", "-u", "appbox", "--", "/usr/bin/env",
+            "XDG_RUNTIME_DIR=/run/user/1000",
+            "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus",
+            "/usr/bin/systemctl", "--user",
+        ]
+    return subprocess.check_output(prefix + list(args), text=True).strip()
+
+
+def user_units(active=False):
+    if not Path("/run/user/1000/bus").exists():
+        return []
+    command = ["list-units", "--state=active,activating", "--plain"] if active else ["list-unit-files"]
+    patterns = USER_PATTERNS + (["app-*@autostart.service"] if active else [])
+    output = ctl(*command, "--no-legend", "--no-pager", *patterns, user=True)
+    return sorted({line.split()[0] for line in output.splitlines() if line.strip()})
+
+
+def gate_units():
+    # These drop-ins live only on the builder, outside all image rootfs trees.
+    content = "[Unit]\nConditionPathExists=/var/lib/appbox-builder-desktop/enabled\n"
+    for root, units in [(Path("/etc/systemd/system"), SYSTEM_UNITS),
+                        (Path("/etc/systemd/user"), user_units())]:
+        for unit in units:
+            directory = root / (unit + ".d")
+            directory.mkdir(mode=0o755, parents=True, exist_ok=True)
+            dropin = directory / "90-appbox-builder-desktop.conf"
+            if dropin.exists() and dropin.read_text() != content:
+                raise RuntimeError(f"Unexpected existing builder drop-in: {dropin}")
+            dropin.write_text(content)
+            dropin.chmod(0o644)
+    ctl("daemon-reload")
+    if Path("/run/user/1000/bus").exists():
+        ctl("daemon-reload", user=True)
+
+
+def status():
+    print("Desktop mode: " + ("on" if MARKER.exists() else "off"))
+    print("Boot target: " + ctl("get-default"))
+    print(ctl("show", *SYSTEM_UNITS, "-p", "Id", "-p", "ActiveState"))
+    active = user_units(active=True)
+    print("Active desktop user units: " + (", ".join(active) if active else "none"))
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Toggle the desktop on builder VM 254280.")
+    parser.add_argument("mode", choices=["on", "off", "status"])
+    mode = parser.parse_args().mode
+    if os.geteuid() != 0:
+        os.execvp("sudo", ["sudo", "--", str(Path(__file__).resolve()), mode])
+    if Path("/sys/class/dmi/id/product_uuid").read_text().strip().lower() != BUILDER_UUID:
+        raise RuntimeError("This command is restricted to builder VM 254280.")
+    if mode == "status":
+        status()
+        return
+
+    STATE.mkdir(mode=0o755, exist_ok=True)
+    if mode == "on":
+        MARKER.touch(mode=0o644)
+    else:
+        MARKER.unlink(missing_ok=True)
+    gate_units()
+
+    if mode == "off":
+        ctl("set-default", "multi-user.target")
+        ctl("disable", *BOOT_UNITS)
+        ctl("stop", *SYSTEM_UNITS)
+        active = user_units(active=True)
+        if active:
+            ctl("stop", *active, user=True)
+        if user_units(active=True):
+            raise RuntimeError("Some desktop user units are still active.")
+        states = ctl("show", *SYSTEM_UNITS, "-p", "ActiveState", "--value").splitlines()
+        if any(state not in ("inactive", "failed") for state in states):
+            raise RuntimeError("Some desktop system services are still active.")
+    else:
+        ctl("set-default", "graphical.target")
+        ctl("enable", *BOOT_UNITS)
+        if Path("/run/user/1000/bus").exists():
+            ctl("start", "pipewire.socket", "pipewire-pulse.socket", user=True)
+        ctl("start", "selkies.service", "selkies-desktop.service")
+        ctl("is-active", "selkies.service", "selkies-desktop.service", "xvfb.service")
+    status()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+        print(f"desktop: {error}", file=sys.stderr)
+        sys.exit(1)
