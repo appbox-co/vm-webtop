@@ -13,4 +13,5 @@ RemainAfterExit=yes
 UMask=0077
 
 [Install]
-WantedBy=multi-user.target
+# cloud-final runs after multi-user.target; use its own target to avoid a cycle.
+WantedBy=cloud-init.target
