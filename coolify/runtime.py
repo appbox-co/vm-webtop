@@ -2,6 +2,7 @@
 """First-boot setup for the Coolify VM image; no control-plane changes."""
 import base64
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -121,6 +122,17 @@ def new_environment(domain):
     }
 
 
+def proxy_gateway():
+    routes = json.loads(run(['ip', '-j', '-4', 'route', 'show', 'default']))
+    gateways = {route['gateway'] for route in routes if route.get('dst') == 'default' and 'gateway' in route}
+    if len(gateways) != 1:
+        raise SetupError('One Appbox bridge gateway is required for the proxy.')
+    gateway = ipaddress.IPv4Address(gateways.pop())
+    if gateway not in ipaddress.IPv4Network('172.20.0.0/16'):
+        raise SetupError('The proxy gateway is outside the Appbox VM network.')
+    return str(gateway)
+
+
 def prepare_state(domain, email=None, *, data=DATA, package=PACKAGE):
     for relative in ('source', 'ssh/keys', 'ssh/mux', 'applications', 'databases',
                      'services', 'backups', 'images', 'proxy/dynamic', 'proxy/certs', 'sentinel'):
@@ -147,6 +159,7 @@ def prepare_state(domain, email=None, *, data=DATA, package=PACKAGE):
                 # Email was validated before reaching here. Escape Compose's dollar
                 # interpolation so addresses containing $ retain their literal value.
                 content = content.replace(b'__APPBOX_ACME_EMAIL__', email.replace('$', '$$').encode())
+                content = content.replace(b'__APPBOX_PROXY_GATEWAY__', proxy_gateway().encode())
             write_atomic(destination, content, uid=9999)
 
 

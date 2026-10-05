@@ -20,6 +20,7 @@ services:
       - --api.dashboard=false
       - --entrypoints.http.address=:80
       - --entrypoints.https.address=:443
+      - --entrypoints.https.proxyprotocol.trustedips=__APPBOX_PROXY_GATEWAY__/32
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --providers.file.directory=/traefik/dynamic/

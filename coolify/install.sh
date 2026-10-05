@@ -50,10 +50,12 @@ systemctl enable --now docker.service
 docker compose version >/dev/null
 
 install -d -m 0755 /usr/local/lib/appbox-coolify
-for coolify_file in runtime.py provision.php compose.yaml proxy.yaml; do
+for coolify_file in runtime.py provision.php compose.yaml proxy.yaml template_mounts.py; do
     install -m 0644 "$coolify_source_dir/$coolify_file" "/usr/local/lib/appbox-coolify/$coolify_file"
 done
 chmod 0755 /usr/local/lib/appbox-coolify/runtime.py
+# Large thin-provisioned disks should trim through the timer, not each root write.
+python3 /usr/local/lib/appbox-coolify/template_mounts.py
 install -m 0755 "$coolify_source_dir/moduser.sh" /moduser.sh
 for coolify_unit in appbox-coolify.service appbox-coolify-certificates.service appbox-coolify-certificates.timer; do
     install -m 0644 "$coolify_source_dir/systemd/$coolify_unit" "/etc/systemd/system/$coolify_unit"

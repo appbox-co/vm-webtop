@@ -47,6 +47,12 @@ checks its SSH host key from its serial console, installs the package and
 records all five upstream image digests. It removes build access, SSH host
 keys and cloud-init identity before shutting down and converting the disk.
 The output is a standalone compressed qcow2 and `artifacts/build.json`.
+For package-only corrections, `coolify/rebuild.py` can use that checksum-verified,
+uninitialized template and an exact pushed source archive. It requires
+`guestfish`/`virt-customize`, verifies the copied package files, records the parent
+template checksum and produces a new standalone image. It must not use a
+customer VM or initialized Coolify disk. The root mount omits synchronous
+`discard`; the existing fstrim timer handles trimming.
 It uses KVM when available and software emulation otherwise. The builder
 and existing Appbox VMs are not used as template disks.
 
@@ -92,7 +98,9 @@ use a separately validated application update procedure.
 ## Domains and certificates
 
 The existing `NginxService.php` stream map forwards each assigned SNI hostname
-to the VM's port 443. The guest's Traefik terminates TLS. Libvirt supplies
+to the VM's port 443. The guest's Traefik terminates TLS and accepts nginx's PROXY protocol header
+from this VM's bridge gateway only. First boot resolves the gateway from the
+normal Appbox network route. Libvirt supplies
 Appbox certificate directories at `/etc/ssl/domains/<domain>/`.
 
 The package checks certificate expiry, hostname coverage and the matching

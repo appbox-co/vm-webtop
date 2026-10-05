@@ -54,6 +54,11 @@ class EnvironmentTests(unittest.TestCase):
 
 
 class PersistenceTests(unittest.TestCase):
+    def setUp(self):
+        gateway = patch.object(runtime, 'proxy_gateway', return_value='172.20.35.1')
+        gateway.start()
+        self.addCleanup(gateway.stop)
+
     def test_restart_preserves_generated_keys_and_user_edited_compose(self):
         # Ownership syscalls need Linux root coverage in the VM release gate.
         with tempfile.TemporaryDirectory() as directory, patch.object(runtime.os, 'chown'), patch.object(runtime.os, 'fchown'):
@@ -66,6 +71,8 @@ class PersistenceTests(unittest.TestCase):
             proxy = (data / 'proxy/docker-compose.yml').read_text()
             self.assertIn('--certificatesresolvers.letsencrypt.acme.email=admin@example.test', proxy)
             self.assertNotIn('__APPBOX_ACME_EMAIL__', proxy)
+            self.assertIn('--entrypoints.https.proxyprotocol.trustedips=172.20.35.1/32', proxy)
+            self.assertNotIn('__APPBOX_PROXY_GATEWAY__', proxy)
             (data / 'source/compose.yaml').write_text('# user configuration\n')
             (data / 'proxy/docker-compose.yml').write_text('# user proxy configuration\n')
             runtime.prepare_state('different.example.test', data=data, package=PACKAGE)
@@ -101,6 +108,35 @@ class PersistenceTests(unittest.TestCase):
             path.chmod(0o644)
             self.assertFalse(runtime.write_atomic(path, b'fixture'))
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+
+
+class ProxyGatewayTests(unittest.TestCase):
+    def test_only_the_actual_bridge_gateway_is_trusted(self):
+        routes = [{'dst': 'default', 'gateway': '172.20.35.1', 'dev': name}
+                  for name in ('ens3', 'enp0s4')]
+        with patch.object(runtime, 'run', return_value=json.dumps(routes).encode()):
+            self.assertEqual(runtime.proxy_gateway(), '172.20.35.1')
+        for routes in ([], [{'dst':'default', 'gateway':'203.0.113.1'}],
+                       [{'dst':'default', 'gateway':'172.20.35.1'},
+                        {'dst':'default', 'gateway':'172.20.36.1'}]):
+            with self.subTest(routes=routes), patch.object(runtime, 'run', return_value=json.dumps(routes).encode()):
+                with self.assertRaises(runtime.SetupError):
+                    runtime.proxy_gateway()
+
+
+class TemplateMountTests(unittest.TestCase):
+    def test_only_root_discard_changes_and_preparation_is_repeatable(self):
+        spec = importlib.util.spec_from_file_location('template_mounts', PACKAGE / 'template_mounts.py')
+        mounts = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mounts)
+        with tempfile.TemporaryDirectory() as directory:
+            fstab = Path(directory) / 'fstab'
+            fstab.write_text('# Preserve this comment\nLABEL=cloudimg-rootfs / ext4 discard,commit=30,errors=remount-ro 0 1\nLABEL=BOOT /boot ext4 defaults 0 2\n')
+            mounts.prepare_root_mount(fstab)
+            expected = '# Preserve this comment\nLABEL=cloudimg-rootfs / ext4 commit=30,errors=remount-ro 0 1\nLABEL=BOOT /boot ext4 defaults 0 2\n'
+            self.assertEqual(fstab.read_text(), expected)
+            mounts.prepare_root_mount(fstab)
+            self.assertEqual(fstab.read_text(), expected)
 
 
 class CertificateTests(unittest.TestCase):
