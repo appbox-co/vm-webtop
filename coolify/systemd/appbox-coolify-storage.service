@@ -1,0 +1,14 @@
+[Unit]
+Description=Prepare the Coolify VM data filesystem
+After=local-fs.target
+Before=docker.service docker.socket containerd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/appbox-coolify/storage.py
+TimeoutStartSec=900
+RemainAfterExit=yes
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

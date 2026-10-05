@@ -151,7 +151,10 @@ test -z "$(sudo -n docker ps -aq)"
 test -z "$(sudo -n docker volume ls -q)"
 test "$(sudo -n systemctl is-enabled appbox-coolify.service)" = enabled
 test "$(sudo -n systemctl is-enabled appbox-coolify-certificates.timer)" = enabled
-sudo -n systemd-analyze verify /etc/systemd/system/appbox-coolify.service /etc/systemd/system/appbox-coolify-certificates.service /etc/systemd/system/appbox-coolify-certificates.timer
+test "$(sudo -n systemctl is-enabled appbox-coolify-storage.service)" = enabled
+test -e /etc/growroot-disabled
+test ! -e /var/lib/appbox-coolify/storage.json
+sudo -n systemd-analyze verify /etc/systemd/system/appbox-coolify.service /etc/systemd/system/appbox-coolify-storage.service /etc/systemd/system/appbox-coolify-certificates.service /etc/systemd/system/appbox-coolify-certificates.timer
 '''
         run(ssh + ['bash -s'], input_data=checks, timeout=120, log=scratch / 'checks.log')
         image_output = run(ssh + ["sudo -n docker image inspect --format '{{json .RepoDigests}}' " + ' '.join(IMAGES)], timeout=120)

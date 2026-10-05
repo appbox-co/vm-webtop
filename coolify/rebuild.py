@@ -45,7 +45,8 @@ def main():
     import tarfile
     with tarfile.open(archive) as source:
         for relative in ('runtime.py', 'provision.php', 'compose.yaml', 'proxy.yaml',
-                         'template_mounts.py', 'moduser.sh'):
+                         'template_mounts.py', 'storage.py', 'moduser.sh',
+                         'systemd/storage.conf', 'systemd/appbox-coolify-storage.service'):
             if source.extractfile('coolify/' + relative).read() != (package / relative).read_bytes():
                 raise RuntimeError('Build source differs from the supplied archive')
     output = work / 'artifacts'
@@ -56,28 +57,43 @@ def main():
     print('Creating a scratch overlay of the checksum-verified sealed template.', flush=True)
     run(['qemu-img', 'create', '-f', 'qcow2', '-F', 'qcow2', '-b', str(base.resolve()), str(disk)])
     command = ['sudo', '-n', 'virt-customize', '--no-network', '-a', str(disk)]
-    for relative in ('runtime.py', 'provision.php', 'compose.yaml', 'proxy.yaml', 'template_mounts.py'):
+    for relative in ('runtime.py', 'provision.php', 'compose.yaml', 'proxy.yaml', 'template_mounts.py', 'storage.py'):
         command += ['--upload', str(package / relative) + ':/usr/local/lib/appbox-coolify/' + relative,
                     '--chmod', '0644:/usr/local/lib/appbox-coolify/' + relative]
     command += ['--chmod', '0755:/usr/local/lib/appbox-coolify/runtime.py',
+                '--chmod', '0755:/usr/local/lib/appbox-coolify/storage.py',
                 '--upload', str(package / 'moduser.sh') + ':/moduser.sh', '--chmod', '0755:/moduser.sh',
-                '--run-command', 'test ! -e /data/coolify/source/.env && test ! -e /data/coolify/source/.appbox-ready && python3 /usr/local/lib/appbox-coolify/template_mounts.py',
+                '--upload', str(package / 'systemd/appbox-coolify-storage.service') + ':/etc/systemd/system/appbox-coolify-storage.service',
+                '--chmod', '0644:/etc/systemd/system/appbox-coolify-storage.service']
+    for unit in ('docker.service', 'docker.socket', 'containerd.service'):
+        destination = '/etc/systemd/system/' + unit + '.d'
+        command += ['--mkdir', destination, '--upload', str(package / 'systemd/storage.conf') + ':' + destination + '/coolify-storage.conf',
+                    '--chmod', '0644:' + destination + '/coolify-storage.conf']
+    command += ['--run-command', 'test ! -e /data/coolify/source/.env && test ! -e /data/coolify/source/.appbox-ready && test ! -e /var/lib/appbox-coolify/storage.json && command -v sgdisk && command -v mkfs.xfs && command -v rsync && python3 /usr/local/lib/appbox-coolify/template_mounts.py && touch /etc/growroot-disabled && systemctl enable appbox-coolify-storage.service',
                 '--delete', '/var/lib/systemd/random-seed', '--delete', '/builder.log']
     print('Applying the archived package to the uninitialized template.', flush=True)
     run(command)
     checks = work / 'checks'
     checks.mkdir(mode=0o700)
-    files = ('runtime.py', 'provision.php', 'compose.yaml', 'proxy.yaml', 'template_mounts.py')
+    files = ('runtime.py', 'provision.php', 'compose.yaml', 'proxy.yaml', 'template_mounts.py', 'storage.py')
     commands = ''.join(f'download /usr/local/lib/appbox-coolify/{relative} {checks / relative}\n' for relative in files)
     commands += f'download /etc/fstab {checks / "fstab"}\n'
-    for path in ('/var/lib/systemd/random-seed', '/data/coolify/source/.env', '/data/coolify/source/.appbox-ready'):
+    commands += f'download /etc/systemd/system/appbox-coolify-storage.service {checks / "storage.service"}\n'
+    for unit in ('docker.service', 'docker.socket', 'containerd.service'):
+        commands += f'download /etc/systemd/system/{unit}.d/coolify-storage.conf {checks / unit}\n'
+    for path in ('/var/lib/systemd/random-seed', '/data/coolify/source/.env', '/data/coolify/source/.appbox-ready', '/var/lib/appbox-coolify/storage.json', '/etc/growroot-disabled'):
         commands += f'exists {path}\n'
     state = run(['sudo', '-n', 'guestfish', '--ro', '--format=qcow2', '-a', str(disk), '-i'], input_data=commands)
-    if state.split() != ['false', 'false', 'false']:
+    if state.split() != ['false', 'false', 'false', 'false', 'true']:
         raise RuntimeError('Rebuilt template contains an identity seed or initialized state')
     for relative in files:
         if (checks / relative).read_bytes() != (package / relative).read_bytes():
             raise RuntimeError('Saved package file differs from the archive')
+    if (checks / 'storage.service').read_bytes() != (package / 'systemd/appbox-coolify-storage.service').read_bytes():
+        raise RuntimeError('Saved storage unit differs from the archive')
+    for unit in ('docker.service', 'docker.socket', 'containerd.service'):
+        if (checks / unit).read_bytes() != (package / 'systemd/storage.conf').read_bytes():
+            raise RuntimeError('Saved storage dependency differs from the archive')
     fstab = (checks / 'fstab').read_text()
     root = [line.split() for line in fstab.splitlines() if line.strip() and not line.startswith('#') and line.split()[1] == '/']
     if len(root) != 1 or 'discard' in root[0][3].split(','):
@@ -95,6 +111,8 @@ def main():
                   virtual_bytes=info['virtual-size'], normal_appbox_install_tested=False,
                   parent_template={'commit':base_record['commit'], 'sha256':base_record['image_sha256']},
                   build_method='verified-sealed-template-rebuild')
+    record['storage_layout'] = {'os_disk_bytes': 34359738368, 'data_filesystem': 'xfs',
+                                'data_uses_remaining_disk': True}
     (output / 'build.json').write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
     print(json.dumps(record, indent=2, sort_keys=True), flush=True)
 

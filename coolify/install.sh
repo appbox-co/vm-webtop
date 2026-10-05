@@ -31,7 +31,8 @@ coolify_source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # A released cloud image can lag current Ubuntu filesystem and kernel fixes.
 apt-get update
 apt-get dist-upgrade -y
-apt-get install -y --no-install-recommends ca-certificates curl openssl openssh-server python3
+apt-get install -y --no-install-recommends ca-certificates curl openssl openssh-server python3 \
+    xfsprogs gdisk rsync
 if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
     install -d -m 0755 /etc/apt/keyrings
     curl --fail --silent --show-error --location https://download.docker.com/linux/ubuntu/gpg \
@@ -53,12 +54,23 @@ systemctl enable --now docker.service
 docker compose version >/dev/null
 
 install -d -m 0755 /usr/local/lib/appbox-coolify
-for coolify_file in runtime.py provision.php compose.yaml proxy.yaml template_mounts.py; do
+for coolify_file in runtime.py provision.php compose.yaml proxy.yaml template_mounts.py storage.py; do
     install -m 0644 "$coolify_source_dir/$coolify_file" "/usr/local/lib/appbox-coolify/$coolify_file"
 done
 chmod 0755 /usr/local/lib/appbox-coolify/runtime.py
+chmod 0755 /usr/local/lib/appbox-coolify/storage.py
 # Large thin-provisioned disks should trim through the timer, not each root write.
 python3 /usr/local/lib/appbox-coolify/template_mounts.py
+# Keep the 32 GiB template OS partition. The Coolify storage service uses the
+# remaining virtual disk space for XFS data before either container daemon starts.
+touch /etc/growroot-disabled
+for coolify_daemon in docker.service docker.socket containerd.service; do
+    install -d -m 0755 "/etc/systemd/system/$coolify_daemon.d"
+    install -m 0644 "$coolify_source_dir/systemd/storage.conf" \
+        "/etc/systemd/system/$coolify_daemon.d/coolify-storage.conf"
+done
+install -m 0644 "$coolify_source_dir/systemd/appbox-coolify-storage.service" \
+    /etc/systemd/system/appbox-coolify-storage.service
 install -m 0755 "$coolify_source_dir/moduser.sh" /moduser.sh
 for coolify_unit in appbox-coolify.service appbox-coolify-certificates.service appbox-coolify-certificates.timer; do
     install -m 0644 "$coolify_source_dir/systemd/$coolify_unit" "/etc/systemd/system/$coolify_unit"
@@ -67,7 +79,7 @@ install -d -m 0755 /etc/systemd/system/cylo-callback.service.d
 install -m 0644 "$coolify_source_dir/systemd/callback.conf" \
     /etc/systemd/system/cylo-callback.service.d/coolify.conf
 systemctl daemon-reload
-systemctl enable appbox-coolify.service appbox-coolify-certificates.timer
+systemctl enable appbox-coolify.service appbox-coolify-certificates.timer appbox-coolify-storage.service
 
 # Cache public upstream images, without creating containers, databases, keys or credentials.
 for coolify_image in coollabsio/coolify:4.3.23 postgres:15-alpine redis:7-alpine \

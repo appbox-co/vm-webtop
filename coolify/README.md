@@ -128,6 +128,22 @@ non-HTTP ports require separate Appbox mappings.
 
 ## Storage and recovery
 
+The image keeps its 32 GiB OS disk layout and creates an XFS filesystem at
+`/data` using the remaining space assigned to the VM. It needs at least 34 GiB
+of total disk capacity. Docker and containerd storage use this data filesystem,
+as do Coolify, its databases and deployed projects. The normal root growth is
+disabled with `/etc/growroot-disabled`; no shared Appbox installer change is
+required. This avoids the first-boot ext4 growth stall observed on grant's
+18000 GiB allocation.
+
+The storage service runs before Docker and containerd. It accepts only the
+sealed image's partition layout and records unique partition and filesystem
+identities before initialization. It refuses a foreign partition or filesystem.
+Later boots mount the same data filesystem and preserve its contents. The
+original cached images remain underneath the Docker bind mounts on the OS disk.
+Changing the VM's disk allocation later needs a separately verified data-growth
+procedure; this initializer does not resize an existing data filesystem.
+
 Keep `/data/coolify`, its `.env` and the Docker volumes in the VM disk and include
 them in backups. The `.env` encryption key is needed to restore stored secrets.
 Restarting setup preserves generated secrets, existing accounts and edited
