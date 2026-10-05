@@ -1,0 +1,10 @@
+[Unit]
+Description=Check for renewed Appbox certificates
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Unit=appbox-coolify-certificates.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+[Unit]
+Description=Load mounted Appbox certificates into Coolify
+After=appbox-coolify.service
+ConditionPathExists=/data/coolify/source/.appbox-ready
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/appbox-coolify/runtime.py sync-certificates
+UMask=0077

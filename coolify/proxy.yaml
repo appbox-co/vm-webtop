@@ -1,0 +1,39 @@
+# Coolify's normal proxy, with TLS-ALPN validation for Appbox's TCP passthrough.
+name: coolify-proxy
+services:
+  traefik:
+    image: traefik:v3.6
+    container_name: coolify-proxy
+    restart: unless-stopped
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - 80:80
+      - 443:443
+    networks: [coolify]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /data/coolify/proxy:/traefik
+    command:
+      - --ping=true
+      - --ping.entrypoint=http
+      - --api.dashboard=false
+      - --entrypoints.http.address=:80
+      - --entrypoints.https.address=:443
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.directory=/traefik/dynamic/
+      - --providers.file.watch=true
+      - "--certificatesresolvers.letsencrypt.acme.email=__APPBOX_ACME_EMAIL__"
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.storage=/traefik/acme.json
+    labels:
+      coolify.managed: "true"
+      coolify.proxy: "true"
+    healthcheck:
+      test: [CMD-SHELL, 'wget -qO- http://127.0.0.1:80/ping || exit 1']
+      interval: 5s
+      timeout: 2s
+      retries: 24
+networks:
+  coolify: {external: true, name: coolify}

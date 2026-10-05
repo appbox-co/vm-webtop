@@ -1,0 +1,16 @@
+[Unit]
+Description=Prepare the Appbox Coolify VPS
+Wants=network-online.target
+Requires=docker.service
+After=network-online.target docker.service cloud-final.service
+Before=cylo-callback.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/appbox-coolify/runtime.py bootstrap
+TimeoutStartSec=900
+RemainAfterExit=yes
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

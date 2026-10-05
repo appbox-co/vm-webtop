@@ -1,0 +1,90 @@
+# Based on Coolify v4.3.23, commit e2e2d4010bcd590084b66d6f748f3eec8e2bbee9.
+name: coolify
+services:
+  coolify:
+    image: coollabsio/coolify:4.3.23
+    container_name: coolify
+    restart: unless-stopped
+    working_dir: /var/www/html
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    env_file: /data/coolify/source/.env
+    environment:
+      APP_ENV: production
+    ports:
+      - 127.0.0.1:8000:8080
+    volumes:
+      - /data/coolify/source/.env:/var/www/html/.env:ro
+      - /data/coolify/ssh:/var/www/html/storage/app/ssh
+      - /data/coolify/applications:/var/www/html/storage/app/applications
+      - /data/coolify/databases:/var/www/html/storage/app/databases
+      - /data/coolify/services:/var/www/html/storage/app/services
+      - /data/coolify/backups:/var/www/html/storage/app/backups
+      - /data/coolify/images:/var/www/html/storage/app/images
+      - /usr/local/lib/appbox-coolify/provision.php:/appbox-provision.php:ro
+    networks: [coolify]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      soketi: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:8080/api/health]
+      interval: 5s
+      timeout: 2s
+      retries: 60
+      start_period: 1m
+  postgres:
+    image: postgres:15-alpine
+    container_name: coolify-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: coolify
+    volumes: [coolify-db:/var/lib/postgresql/data]
+    networks: [coolify]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d coolify']
+      interval: 5s
+      timeout: 2s
+      retries: 60
+  redis:
+    image: redis:7-alpine
+    container_name: coolify-redis
+    restart: unless-stopped
+    command: [redis-server, --save, "20", "1", --loglevel, warning, --requirepass, "${REDIS_PASSWORD}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes: [coolify-redis:/data]
+    networks: [coolify]
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$${REDIS_PASSWORD}" redis-cli ping | grep -qx PONG']
+      interval: 5s
+      timeout: 2s
+      retries: 60
+  soketi:
+    image: coollabsio/coolify-realtime:1.0.19
+    container_name: coolify-realtime
+    restart: unless-stopped
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    environment:
+      APP_NAME: Coolify
+      SOKETI_DEBUG: "false"
+      SOKETI_DEFAULT_APP_ID: ${PUSHER_APP_ID}
+      SOKETI_DEFAULT_APP_KEY: ${PUSHER_APP_KEY}
+      SOKETI_DEFAULT_APP_SECRET: ${PUSHER_APP_SECRET}
+      SOKETI_HOST: 0.0.0.0
+    volumes:
+      - /data/coolify/ssh:/var/www/html/storage/app/ssh
+    networks: [coolify]
+    healthcheck:
+      test: [CMD-SHELL, 'wget -qO- http://127.0.0.1:6001/ready && wget -qO- http://127.0.0.1:6002/ready']
+      interval: 5s
+      timeout: 2s
+      retries: 60
+volumes:
+  coolify-db: {name: coolify-db}
+  coolify-redis: {name: coolify-redis}
+networks:
+  coolify: {external: true, name: coolify}
