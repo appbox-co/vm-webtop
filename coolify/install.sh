@@ -27,7 +27,10 @@ if systemctl is-active --quiet nginx.service selkies-nginx.service; then
 fi
 
 coolify_source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+# Refresh the fresh template, including its kernel, before sealing it.
+# A released cloud image can lag current Ubuntu filesystem and kernel fixes.
 apt-get update
+apt-get dist-upgrade -y
 apt-get install -y --no-install-recommends ca-certificates curl openssl openssh-server python3
 if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
     install -d -m 0755 /etc/apt/keyrings

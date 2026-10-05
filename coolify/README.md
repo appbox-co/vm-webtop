@@ -43,15 +43,17 @@ python3 context/coolify/build.py --commit <full-commit-sha> \
 ```
 
 It verifies the official cloud image's SHA-256 checksum, boots a fresh guest,
-checks its SSH host key from its serial console, installs the package and
-records all five upstream image digests. It removes build access, SSH host
+checks its SSH host key from its serial console, applies current Ubuntu updates,
+installs the package and records all five upstream image digests. It removes build access, SSH host
 keys and cloud-init identity before shutting down and converting the disk.
 The output is a standalone compressed qcow2 and `artifacts/build.json`.
 For package-only corrections, `coolify/rebuild.py` can use that checksum-verified,
 uninitialized template and an exact pushed source archive. It requires
 `guestfish`/`virt-customize`, verifies the copied package files, records the parent
-template checksum and produces a new standalone image. It must not use a
-customer VM or initialized Coolify disk. The root mount omits synchronous
+template checksum and produces a new standalone image. OS or kernel updates
+require a fresh full build; its receipt records installed OS package versions
+and the kernel selected for the next boot. It must not use a customer VM or
+initialized Coolify disk. The root mount omits synchronous
 `discard`; the existing fstrim timer handles trimming.
 It uses KVM when available and software emulation otherwise. The builder
 and existing Appbox VMs are not used as template disks.
