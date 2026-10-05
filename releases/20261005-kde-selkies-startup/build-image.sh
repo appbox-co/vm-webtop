@@ -22,7 +22,10 @@ virt-customize --no-network -a "$build_dir/image.img" \
     --copy-in "$source_file:/etc/selkies" \
     --chmod 0755:/etc/selkies/init-selkies-config.sh \
     --chown 0:0:/etc/selkies/init-selkies-config.sh \
-    --run "$repo_dir/testing/component/test_selkies_installation.sh"
+    --mkdir /tmp/appbox-kde-20261005-check \
+    --copy-in "$repo_dir/testing/component/test_selkies_installation.sh:/tmp/appbox-kde-20261005-check" \
+    --run-command 'bash /tmp/appbox-kde-20261005-check/test_selkies_installation.sh' \
+    --delete /tmp/appbox-kde-20261005-check
 actual_sha=$(virt-cat -a "$build_dir/image.img" /etc/selkies/init-selkies-config.sh | sha256sum | cut -d' ' -f1)
 [[ "$actual_sha" == "$new_sha" ]]
 qemu-img check "$build_dir/image.img"
