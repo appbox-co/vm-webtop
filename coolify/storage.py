@@ -98,7 +98,7 @@ def save_state(state, *, new=False):
 
 
 def filesystem():
-    result = run(['blkid', '-p', '-o', 'export', DEVICE], accepted=(0, 2))
+    result = run(['blkid', '-p', '--no-part-details', '-o', 'export', DEVICE], accepted=(0, 2))
     if result.returncode == 2 and result.stdout.strip():
         raise RuntimeError('Ambiguous partition signature')
     return dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
