@@ -54,8 +54,13 @@ and existing Appbox VMs are not used as template disks.
 
 The new catalogue entry will need `type = vm`, `tcp_passthrough = true`,
 `IsWebApp = 1`, domain support, an SSH port mapping and `expect_callback = 1`.
-Keep it admin-only for validation on `grant` (Cylo 11350, formerly `tester2`). Registration and resource
-settings are a separate rollout step; this branch does not change the catalogue.
+Keep it admin-only for validation on `grant` (Cylo 11350, formerly `tester2`). The admin-only test entry is defined in `appbox.yml` and
+`catalogue/register-admin-test.sql`: 4 CPUs, 8 GB RAM and eight app slots.
+The SQL script follows the existing importer contract with VM settings; the
+Docker-only importer must not be used for this image. Execute the reviewed
+script once through Postgres MCP, then verify the saved records. Registration
+does not make the app public. The test entry uses the default catalogue icon;
+a public launch still needs its official icon and marketing assets.
 
 The normal VM cloud-init path must supply these entries in `/etc/environment`:
 

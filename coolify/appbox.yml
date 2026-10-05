@@ -1,0 +1,68 @@
+# VM metadata; registration uses catalogue/register-admin-test.sql.
+# Do not run the Docker-only apps importer against this manifest.
+app:
+  display_name: Coolify VPS
+  publisher: Coollabs
+  admin_only: true
+  categories: [16, 27, 29]
+  type: vm
+image:
+  name: coolify-ubuntu-26.04-4.3.23-c315a7b072ea.qcow2
+  version: 4.3.23 / Ubuntu 26.04
+  tag: 4.3.23-ubuntu26.04-c315a7b
+  sha256: f39eaf3870e756b7884c69f0c21325ff8901de1699c9b8c63ace237be10cc7b9
+  source_commit: c315a7b072ea38b04e8f1716e4b09bfe962990ae
+container:
+  memory: 8
+  memory_swap: 8
+  memory_reservation: 8
+  cpus: 4
+networking:
+  is_web_app: true
+  requires_domain: true
+  ssl: true
+  tcp_passthrough: true
+  multiple_domains: true
+  subdomain: coolify
+behavior:
+  app_slots: 8
+  expect_callback: true
+  callback_requires_auth: true
+  can_update: false
+ports:
+  tcp:
+    range: '22'
+env:
+  - key: VIRTUAL_PORT
+    value: '80'
+    template_type: none
+custom_fields:
+  COOLIFY_ADMIN_EMAIL:
+    label: Administrator email
+    type: email
+    validate: [required, {minLength: 3}, {maxLength: 254}]
+    params: {showOnInstalled: true}
+  PASSWORD:
+    label: Administrator and SSH password
+    type: complexPassword
+    validate: [required, {minLength: 12}, {maxLength: 72}]
+    sensitive: true
+    revealable: true
+    params: {showOnInstalled: true}
+  LOGIN_USER:
+    label: SSH username
+    type: staticText
+    default_value: appbox
+    params: {showOnInstalled: true}
+  SERVER_ADDR:
+    label: SSH host
+    type: staticText
+    default_value: '%DOMAIN.DOMAIN%'
+    template_type: instance
+    params: {showOnInstalled: true}
+  SSH_PORT:
+    label: SSH port
+    type: staticText
+    default_value: '%PORTS|0.EXTERNAL%'
+    template_type: instance
+    params: {showOnInstalled: true}
