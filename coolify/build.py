@@ -160,7 +160,7 @@ sudo -n systemd-analyze verify /etc/systemd/system/appbox-coolify.service /etc/s
             raise RuntimeError('Upstream image digests are incomplete.')
         os_package_output = run(ssh + ["dpkg-query -W -f='${binary:Package}\\t${Version}\\n' cloud-init e2fsprogs 'linux-image-[0-9]*-generic'"], timeout=30)
         os_packages = dict(line.split('\t', 1) for line in os_package_output.splitlines())
-        next_boot_kernel = run(ssh + ['readlink -f /vmlinuz'], timeout=30).strip()
+        next_boot_kernel = run(ssh + ['readlink -f /boot/vmlinuz'], timeout=30).strip()
         if not next_boot_kernel.startswith('/boot/vmlinuz-7.'):
             raise RuntimeError('The updated Ubuntu kernel is not selected for next boot.')
         print('Sealing the guest and shutting it down.', flush=True)
