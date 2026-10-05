@@ -144,6 +144,14 @@ original cached images remain underneath the Docker bind mounts on the OS disk.
 Changing the VM's disk allocation later needs a separately verified data-growth
 procedure; this initializer does not resize an existing data filesystem.
 
+The r5 validation image skips automatic trimming until the first Coolify setup
+has succeeded. Its own `fstrim.service` condition checks the existing readiness
+marker; later scheduled runs keep the OS trimming service and schedule. This
+is an A/B check of the r4 startup stall, which occurred after storage preparation
+completed and automatic trimming started. It does not establish the underlying
+cause or prove that later trimming is safe. Test an actual trim on the initialized
+VM, followed by a reboot, before declaring this image ready.
+
 Keep `/data/coolify`, its `.env` and the Docker volumes in the VM disk and include
 them in backups. The `.env` encryption key is needed to restore stored secrets.
 Restarting setup preserves generated secrets, existing accounts and edited

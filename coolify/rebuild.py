@@ -46,7 +46,8 @@ def main():
     with tarfile.open(archive) as source:
         for relative in ('runtime.py', 'provision.php', 'compose.yaml', 'proxy.yaml',
                          'template_mounts.py', 'storage.py', 'moduser.sh',
-                         'systemd/storage.conf', 'systemd/appbox-coolify-storage.service'):
+                         'systemd/storage.conf', 'systemd/appbox-coolify-storage.service',
+                         'systemd/fstrim.conf'):
             if source.extractfile('coolify/' + relative).read() != (package / relative).read_bytes():
                 raise RuntimeError('Build source differs from the supplied archive')
     output = work / 'artifacts'
@@ -69,7 +70,10 @@ def main():
         destination = '/etc/systemd/system/' + unit + '.d'
         command += ['--mkdir', destination, '--upload', str(package / 'systemd/storage.conf') + ':' + destination + '/coolify-storage.conf',
                     '--chmod', '0644:' + destination + '/coolify-storage.conf']
-    command += ['--run-command', 'test ! -e /data/coolify/source/.env && test ! -e /data/coolify/source/.appbox-ready && test ! -e /var/lib/appbox-coolify/storage.json && command -v sgdisk && command -v mkfs.xfs && command -v rsync && python3 /usr/local/lib/appbox-coolify/template_mounts.py && touch /etc/growroot-disabled && systemctl enable appbox-coolify-storage.service',
+    command += ['--mkdir', '/etc/systemd/system/fstrim.service.d',
+                '--upload', str(package / 'systemd/fstrim.conf') + ':/etc/systemd/system/fstrim.service.d/coolify-first-boot.conf',
+                '--chmod', '0644:/etc/systemd/system/fstrim.service.d/coolify-first-boot.conf']
+    command += ['--run-command', 'test ! -e /data/coolify/source/.env && test ! -e /data/coolify/source/.appbox-ready && test ! -e /var/lib/appbox-coolify/storage.json && command -v sgdisk && command -v mkfs.xfs && command -v rsync && python3 /usr/local/lib/appbox-coolify/template_mounts.py && touch /etc/growroot-disabled && systemctl enable appbox-coolify-storage.service && systemd-analyze verify fstrim.service',
                 '--delete', '/var/lib/systemd/random-seed', '--delete', '/builder.log']
     print('Applying the archived package to the uninitialized template.', flush=True)
     run(command)
@@ -79,6 +83,7 @@ def main():
     commands = ''.join(f'download /usr/local/lib/appbox-coolify/{relative} {checks / relative}\n' for relative in files)
     commands += f'download /etc/fstab {checks / "fstab"}\n'
     commands += f'download /etc/systemd/system/appbox-coolify-storage.service {checks / "storage.service"}\n'
+    commands += f'download /etc/systemd/system/fstrim.service.d/coolify-first-boot.conf {checks / "fstrim.conf"}\n'
     for unit in ('docker.service', 'docker.socket', 'containerd.service'):
         commands += f'download /etc/systemd/system/{unit}.d/coolify-storage.conf {checks / unit}\n'
     for path in ('/var/lib/systemd/random-seed', '/data/coolify/source/.env', '/data/coolify/source/.appbox-ready', '/var/lib/appbox-coolify/storage.json', '/etc/growroot-disabled'):
@@ -91,6 +96,8 @@ def main():
             raise RuntimeError('Saved package file differs from the archive')
     if (checks / 'storage.service').read_bytes() != (package / 'systemd/appbox-coolify-storage.service').read_bytes():
         raise RuntimeError('Saved storage unit differs from the archive')
+    if (checks / 'fstrim.conf').read_bytes() != (package / 'systemd/fstrim.conf').read_bytes():
+        raise RuntimeError('Saved initial trim condition differs from the archive')
     for unit in ('docker.service', 'docker.socket', 'containerd.service'):
         if (checks / unit).read_bytes() != (package / 'systemd/storage.conf').read_bytes():
             raise RuntimeError('Saved storage dependency differs from the archive')
@@ -113,6 +120,7 @@ def main():
                   build_method='verified-sealed-template-rebuild')
     record['storage_layout'] = {'os_disk_bytes': 34359738368, 'data_filesystem': 'xfs',
                                 'data_uses_remaining_disk': True}
+    record['initial_trim_requires_coolify_ready'] = True
     (output / 'build.json').write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
     print(json.dumps(record, indent=2, sort_keys=True), flush=True)
 

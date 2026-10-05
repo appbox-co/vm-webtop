@@ -71,6 +71,9 @@ for coolify_daemon in docker.service docker.socket containerd.service; do
 done
 install -m 0644 "$coolify_source_dir/systemd/appbox-coolify-storage.service" \
     /etc/systemd/system/appbox-coolify-storage.service
+install -d -m 0755 /etc/systemd/system/fstrim.service.d
+install -m 0644 "$coolify_source_dir/systemd/fstrim.conf" \
+    /etc/systemd/system/fstrim.service.d/coolify-first-boot.conf
 install -m 0755 "$coolify_source_dir/moduser.sh" /moduser.sh
 for coolify_unit in appbox-coolify.service appbox-coolify-certificates.service appbox-coolify-certificates.timer; do
     install -m 0644 "$coolify_source_dir/systemd/$coolify_unit" "/etc/systemd/system/$coolify_unit"
