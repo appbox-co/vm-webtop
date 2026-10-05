@@ -4,17 +4,17 @@ set +x
 export DEBIAN_FRONTEND=noninteractive
 
 if [[ ${1:-} == --help ]]; then
-    printf 'Usage: sudo bash coolify/install.sh\nRun only in a fresh Ubuntu 24.04 amd64 template VM.\n'
+    printf 'Usage: sudo bash coolify/install.sh\nRun only in a fresh Ubuntu 26.04 amd64 template VM.\n'
     exit 0
 fi
 if [[ $# != 0 || $EUID != 0 || $(uname -m) != x86_64 ]]; then
-    printf 'A fresh Ubuntu 24.04 amd64 template VM and root access are required.\n' >&2
+    printf 'A fresh Ubuntu 26.04 amd64 template VM and root access are required.\n' >&2
     exit 1
 fi
 # shellcheck source=/dev/null
 source /etc/os-release
-if [[ ${ID:-} != ubuntu || ${VERSION_ID:-} != 24.04 ]]; then
-    printf 'This image installer supports Ubuntu 24.04 only.\n' >&2
+if [[ ${ID:-} != ubuntu || ${VERSION_ID:-} != 26.04 ]]; then
+    printf 'This image installer supports Ubuntu 26.04 only.\n' >&2
     exit 1
 fi
 if [[ -e /data/coolify/source/.env || -e /data/coolify/source/.appbox-ready ]]; then
@@ -37,7 +37,7 @@ if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; t
     cat > /etc/apt/sources.list.d/docker.sources <<'EOF'
 Types: deb
 URIs: https://download.docker.com/linux/ubuntu
-Suites: noble
+Suites: resolute
 Components: stable
 Architectures: amd64
 Signed-By: /etc/apt/keyrings/docker.asc

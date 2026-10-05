@@ -1,7 +1,7 @@
 # Coolify VPS image
 
 This branch adds a server-only Coolify image to `vm_images`. It uses Ubuntu
-24.04 amd64 and Coolify 4.3.23. It does not run the desktop installer.
+26.04 amd64 and Coolify 4.3.23. It does not run the desktop installer.
 
 The package includes Coolify, PostgreSQL 15, Redis 7, the upstream realtime
 service and Traefik. Docker and all project workloads run inside the guest VM.
@@ -9,7 +9,7 @@ It uses the existing Appbox VM lifecycle, callback and domain routing.
 
 ## Prepare a template
 
-Use a fresh Ubuntu 24.04 cloud-image VM on the designated image builder.
+Use a fresh Ubuntu 26.04 cloud-image VM on the designated image builder.
 Check out the exact reviewed and pushed branch commit inside that VM, then run:
 
 ```bash
