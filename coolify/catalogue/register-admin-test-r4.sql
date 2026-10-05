@@ -17,7 +17,7 @@ BEGIN
         RAISE EXCEPTION 'Expected private Coolify preview changed';
     END IF;
     IF EXISTS (SELECT 1 FROM app_versions WHERE app_id=283
-        AND (tag='4.3.23-ubuntu26.04-66a4bd8'
+        AND (tag='4.3.23-ubuntu26.04-0af77ec'
              OR version='4.3.23 / Ubuntu 26.04 r4')) THEN
         RAISE EXCEPTION 'Revised test version already exists';
     END IF;
@@ -28,9 +28,9 @@ BEGIN
          pids_limit,combined_port_range,combined_dynamic_ports,app_slots,
          min_memory,min_cpus,custom_field_preinstall_description,
          custom_field_postinstall_description)
-    SELECT app_id,'4.3.23 / Ubuntu 26.04 r4','4.3.23-ubuntu26.04-66a4bd8',1,1,1,
+    SELECT app_id,'4.3.23 / Ubuntu 26.04 r4','4.3.23-ubuntu26.04-0af77ec',1,1,1,
         'Admin-only test build of Coolify 4.3.23 on Ubuntu 26.04. The 32 GiB OS disk layout stays fixed; an XFS data filesystem uses the remaining assigned disk space for Coolify, Docker and projects. At least 34 GiB total disk space is required. Automatic updates remain disabled during validation. Assign project hostnames to the VM in Appbox before using them in Coolify.',
-        'coolify-ubuntu-26.04-4.3.23-66a4bd863dd6.qcow2',
+        'coolify-ubuntu-26.04-4.3.23-0af77ecda912.qcow2',
         memory,memory_swap,memory_reservation,cpus,init,privileged,cap_add,cap_drop,
         tcp_port_range,udp_port_range,tcp_dynamic_ports,udp_dynamic_ports,
         pids_limit,combined_port_range,combined_dynamic_ports,app_slots,
@@ -48,8 +48,8 @@ BEGIN
     GET DIAGNOSTICS affected = ROW_COUNT;
     IF affected <> 1 THEN RAISE EXCEPTION 'Expected one superseded preview'; END IF;
 
-    UPDATE apps SET "Image"='coolify-ubuntu-26.04-4.3.23-66a4bd863dd6.qcow2',
-        version='4.3.23 / Ubuntu 26.04 r4',tag='4.3.23-ubuntu26.04-66a4bd8',
+    UPDATE apps SET "Image"='coolify-ubuntu-26.04-4.3.23-0af77ecda912.qcow2',
+        version='4.3.23 / Ubuntu 26.04 r4',tag='4.3.23-ubuntu26.04-0af77ec',
         updated_at=to_char(now(),'YYYY-MM-DD"T"HH24:MI:SSOF')
     WHERE id=283 AND type='vm' AND admin_only=1
       AND "Image"='coolify-ubuntu-26.04-4.3.23-3dd5e941cdc8.qcow2';
