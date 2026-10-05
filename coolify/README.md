@@ -33,6 +33,23 @@ that release. Supporting images use upstream version tags; capture their exact
 registry digests in the image build record before a release. Source preparation
 alone does not verify those tags or publish a VM image.
 
+`coolify/build.py` automates this preparation on `builder.tester2.appboxes.co`
+as `appbox`. Give it an archive made from the exact pushed Git commit and a
+unique directory under `/home/appbox/builds/coolify-vps-*`:
+
+```bash
+python3 context/coolify/build.py --commit <full-commit-sha> \
+  --archive context.tgz --work-dir <unique-build-directory>
+```
+
+It verifies the official cloud image's SHA-256 checksum, boots a fresh guest,
+checks its SSH host key from its serial console, installs the package and
+records all five upstream image digests. It removes build access, SSH host
+keys and cloud-init identity before shutting down and converting the disk.
+The output is a standalone compressed qcow2 and `artifacts/build.json`.
+It uses KVM when available and software emulation otherwise. The builder
+and existing Appbox VMs are not used as template disks.
+
 ## Installation configuration
 
 The new catalogue entry will need `type = vm`, `tcp_passthrough = true`,
