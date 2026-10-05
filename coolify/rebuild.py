@@ -9,8 +9,12 @@ import re
 import subprocess
 
 
-def run(arguments, timeout=900):
-    return subprocess.check_output(arguments, text=True, stderr=subprocess.STDOUT, timeout=timeout)
+def run(arguments, timeout=900, input_data=None):
+    result = subprocess.run(arguments, input=input_data, text=True, capture_output=True, timeout=timeout)
+    if result.returncode:
+        print((result.stdout + result.stderr)[-2000:], flush=True)
+        raise RuntimeError(f'{arguments[0]} failed with status {result.returncode}')
+    return result.stdout
 
 
 def digest(path):
@@ -49,22 +53,32 @@ def main():
     disk = work / 'prepared.qcow2'
     if disk.exists():
         raise RuntimeError('Build work directory already contains a disk')
-    print('Copying the checksum-verified sealed template.', flush=True)
-    run(['qemu-img', 'convert', '-f', 'qcow2', '-O', 'qcow2', str(base), str(disk)])
-    command = ['virt-customize', '--no-network', '-a', str(disk)]
+    print('Creating a scratch overlay of the checksum-verified sealed template.', flush=True)
+    run(['qemu-img', 'create', '-f', 'qcow2', '-F', 'qcow2', '-b', str(base.resolve()), str(disk)])
+    command = ['sudo', '-n', 'virt-customize', '--no-network', '-a', str(disk)]
     for relative in ('runtime.py', 'provision.php', 'compose.yaml', 'proxy.yaml', 'template_mounts.py'):
         command += ['--upload', str(package / relative) + ':/usr/local/lib/appbox-coolify/' + relative,
                     '--chmod', '0644:/usr/local/lib/appbox-coolify/' + relative]
     command += ['--chmod', '0755:/usr/local/lib/appbox-coolify/runtime.py',
                 '--upload', str(package / 'moduser.sh') + ':/moduser.sh', '--chmod', '0755:/moduser.sh',
-                '--run-command', 'test ! -e /data/coolify/source/.env && test ! -e /data/coolify/source/.appbox-ready && python3 /usr/local/lib/appbox-coolify/template_mounts.py']
+                '--run-command', 'test ! -e /data/coolify/source/.env && test ! -e /data/coolify/source/.appbox-ready && python3 /usr/local/lib/appbox-coolify/template_mounts.py',
+                '--delete', '/var/lib/systemd/random-seed', '--delete', '/builder.log']
     print('Applying the archived package to the uninitialized template.', flush=True)
     run(command)
-    for relative in ('runtime.py', 'provision.php', 'compose.yaml', 'proxy.yaml', 'template_mounts.py'):
-        saved = run(['virt-cat', '--format=qcow2', '-a', str(disk), '/usr/local/lib/appbox-coolify/' + relative])
-        if saved != (package / relative).read_text():
+    checks = work / 'checks'
+    checks.mkdir(mode=0o700)
+    files = ('runtime.py', 'provision.php', 'compose.yaml', 'proxy.yaml', 'template_mounts.py')
+    commands = ''.join(f'download /usr/local/lib/appbox-coolify/{relative} {checks / relative}\n' for relative in files)
+    commands += f'download /etc/fstab {checks / "fstab"}\n'
+    for path in ('/var/lib/systemd/random-seed', '/data/coolify/source/.env', '/data/coolify/source/.appbox-ready'):
+        commands += f'exists {path}\n'
+    state = run(['sudo', '-n', 'guestfish', '--ro', '--format=qcow2', '-a', str(disk), '-i'], input_data=commands)
+    if state.split() != ['false', 'false', 'false']:
+        raise RuntimeError('Rebuilt template contains an identity seed or initialized state')
+    for relative in files:
+        if (checks / relative).read_bytes() != (package / relative).read_bytes():
             raise RuntimeError('Saved package file differs from the archive')
-    fstab = run(['virt-cat', '--format=qcow2', '-a', str(disk), '/etc/fstab'])
+    fstab = (checks / 'fstab').read_text()
     root = [line.split() for line in fstab.splitlines() if line.strip() and not line.startswith('#') and line.split()[1] == '/']
     if len(root) != 1 or 'discard' in root[0][3].split(','):
         raise RuntimeError('Template root mount still enables synchronous discard')
