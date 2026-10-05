@@ -33,7 +33,7 @@ that release. Supporting images use upstream version tags; capture their exact
 registry digests in the image build record before a release. Source preparation
 alone does not verify those tags or publish a VM image.
 
-`coolify/build.py` automates this preparation on `builder.tester2.appboxes.co`
+`coolify/build.py` automates this preparation on `builder.grant.appboxes.co`
 as `appbox`. Give it an archive made from the exact pushed Git commit and a
 unique directory under `/home/appbox/builds/coolify-vps-*`:
 
@@ -54,7 +54,7 @@ and existing Appbox VMs are not used as template disks.
 
 The new catalogue entry will need `type = vm`, `tcp_passthrough = true`,
 `IsWebApp = 1`, domain support, an SSH port mapping and `expect_callback = 1`.
-Keep it admin-only for validation on `tester2`. Registration and resource
+Keep it admin-only for validation on `grant` (Cylo 11350, formerly `tester2`). Registration and resource
 settings are a separate rollout step; this branch does not change the catalogue.
 
 The normal VM cloud-init path must supply these entries in `/etc/environment`:
@@ -148,7 +148,7 @@ Required checks before publication and catalogue launch:
 
 - Prepare, seal and boot two disposable guest clones; confirm their application
   secrets, database credentials, SSH keys and machine identities differ.
-- Install the image normally on `tester2`; check callback state, administrator
+- Install the image normally on `grant`; check callback state, administrator
   login, owner role, public registration blocking and password recovery.
 - Check the installed password's owner Show/Hide controls without recording it.
 - Deploy a disposable project on an assigned Appbox hostname and verify its

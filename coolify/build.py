@@ -16,6 +16,7 @@ import threading
 import time
 import urllib.request
 
+BUILDER_HOSTS = {'builder.grant.appboxes.co', 'builder.tester2.appboxes.co'}
 BASE_URL = 'https://cloud-images.ubuntu.com/releases/26.04/release/'
 BASE_NAME = 'ubuntu-26.04-server-cloudimg-amd64.img'
 IMAGES = ('coollabsio/coolify:4.3.23', 'postgres:15-alpine', 'redis:7-alpine',
@@ -43,7 +44,7 @@ class SeedHandler(http.server.SimpleHTTPRequestHandler):
 
 
 def build(arguments):
-    if socket.getfqdn() != 'builder.tester2.appboxes.co' or os.geteuid() == 0:
+    if socket.getfqdn() not in BUILDER_HOSTS or os.geteuid() == 0:
         raise RuntimeError('Run as appbox on the dedicated builder.')
     if not re.fullmatch(r'[a-f0-9]{40}', arguments.commit):
         raise RuntimeError('A full committed Git revision is required.')
@@ -190,7 +191,8 @@ SEAL
                   'archive_sha256': archive_hash, 'base_url': BASE_URL + BASE_NAME,
                   'base_sha256': matches[0], 'image': image.name, 'image_sha256': digest(image),
                   'image_bytes': image.stat().st_size, 'virtual_bytes': info['virtual-size'],
-                  'accelerator': accelerator, 'upstream_images': dict(zip(IMAGES, image_info)),
+                  'accelerator': accelerator, 'builder_hostname': socket.getfqdn(),
+                  'upstream_images': dict(zip(IMAGES, image_info)),
                   'normal_appbox_install_tested': False}
         (output / 'build.json').write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
         print(json.dumps(record, indent=2, sort_keys=True), flush=True)
