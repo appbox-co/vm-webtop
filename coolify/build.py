@@ -87,7 +87,7 @@ def build(arguments):
     }
     (seed / 'user-data').write_text('#cloud-config\n' + json.dumps(configuration) + '\n')
     (seed / 'meta-data').write_text(json.dumps({'instance-id': work.name, 'local-hostname': 'coolify-image-build'}) + '\n')
-    (seed / 'vendor-data').write_text('{}\n')
+    (seed / 'vendor-data').write_text('#cloud-config\n{}\n')
     (seed / 'network-config').write_text(json.dumps({'version': 2, 'ethernets': {'build': {
         'match': {'name': 'en*'}, 'dhcp4': True}}}) + '\n')
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(SeedHandler, directory=str(seed)))
@@ -128,7 +128,8 @@ def build(arguments):
                '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
                '-o', 'UserKnownHostsFile=' + str(known_hosts), '-o', 'ConnectTimeout=10',
                '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=4', 'appbox@127.0.0.1']
-        run(ssh + ['sudo -n cloud-init status --wait'], timeout=1200)
+        run(ssh + ['sudo -n cloud-init status --wait'], timeout=1200,
+            log=scratch / 'cloud-init.log')
         print('Installing Docker and caching the five upstream images inside the guest.', flush=True)
         script = f'''set -eu
 sudo -n install -d -m 0755 /opt/appbox-coolify-build
