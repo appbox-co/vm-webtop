@@ -102,8 +102,8 @@ def main():
             ctl("stop", *active, user=True)
         if user_units(active=True):
             raise RuntimeError("Some desktop user units are still active.")
-        states = ctl("show", *SYSTEM_UNITS, "-p", "ActiveState", "--value").splitlines()
-        if any(state not in ("inactive", "failed") for state in states):
+        states = [line for line in ctl("show", *SYSTEM_UNITS, "-p", "ActiveState", "--value").splitlines() if line]
+        if len(states) != len(SYSTEM_UNITS) or any(state not in ("inactive", "failed") for state in states):
             raise RuntimeError("Some desktop system services are still active.")
     else:
         ctl("set-default", "graphical.target")
