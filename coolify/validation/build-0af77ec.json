@@ -1,0 +1,48 @@
+{
+  "accelerator": "tcg,thread=multi",
+  "archive_sha256": "06614e3cc843ab9a1d8f69ae08052ba9afcad8705ac970c635566e17a0797844",
+  "base_sha256": "8800651811af9a85465ad1d552add729947bb16488dddb4a9b5305a3d97332b2",
+  "base_url": "https://cloud-images.ubuntu.com/releases/26.04/release/ubuntu-26.04-server-cloudimg-amd64.img",
+  "build_method": "verified-sealed-template-rebuild",
+  "builder_hostname": "builder.grant.appboxes.co",
+  "commit": "0af77ecda91273351302d2b70f4cdccae0845164",
+  "created_at": "2026-10-05T14:54:43.560823+00:00",
+  "image": "coolify-ubuntu-26.04-4.3.23-0af77ecda912.qcow2",
+  "image_bytes": 3063645696,
+  "image_sha256": "c3b94ae1274d2bbd527ca6e066db826d79c8b7a0ce00872bafb6ba1c95f2df84",
+  "next_boot_kernel": "/boot/vmlinuz-7.0.0-38-generic",
+  "normal_appbox_install_tested": false,
+  "os_packages": {
+    "cloud-init": "26.1-0ubuntu3~26.04.1",
+    "e2fsprogs": "1.47.2-3ubuntu4",
+    "linux-image-7.0.0-34-generic": "7.0.0-34.34",
+    "linux-image-7.0.0-38-generic": "7.0.0-38.38"
+  },
+  "parent_template": {
+    "commit": "3dd5e941cdc8419582207510dd79a35df7ae2e3f",
+    "sha256": "d8b154b5e718d21f5370f74452a0c9134746978458210db5a88c9c938588c8f8"
+  },
+  "storage_layout": {
+    "data_filesystem": "xfs",
+    "data_uses_remaining_disk": true,
+    "os_disk_bytes": 34359738368
+  },
+  "upstream_images": {
+    "coollabsio/coolify-realtime:1.0.19": [
+      "coollabsio/coolify-realtime@sha256:087c9d263ab0154d68d40c900bf729a8b59a262bd73d8407c2d1104b70cfdedf"
+    ],
+    "coollabsio/coolify:4.3.23": [
+      "coollabsio/coolify@sha256:79d5c0443696f2fcb280a4d5a15fcc091a51784e566ab212889a08e424d8187c"
+    ],
+    "postgres:15-alpine": [
+      "postgres@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81"
+    ],
+    "redis:7-alpine": [
+      "redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499"
+    ],
+    "traefik:v3.6": [
+      "traefik@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d"
+    ]
+  },
+  "virtual_bytes": 34359738368
+}

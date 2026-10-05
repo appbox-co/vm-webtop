@@ -19,11 +19,11 @@ app:
   categories: [16, 27, 29]
   type: vm
 image:
-  name: coolify-ubuntu-26.04-4.3.23-3dd5e941cdc8.qcow2
-  version: 4.3.23 / Ubuntu 26.04 r3
-  tag: 4.3.23-ubuntu26.04-3dd5e94
-  sha256: d8b154b5e718d21f5370f74452a0c9134746978458210db5a88c9c938588c8f8
-  source_commit: 3dd5e941cdc8419582207510dd79a35df7ae2e3f
+  name: coolify-ubuntu-26.04-4.3.23-0af77ecda912.qcow2
+  version: 4.3.23 / Ubuntu 26.04 r4
+  tag: 4.3.23-ubuntu26.04-0af77ec
+  sha256: c3b94ae1274d2bbd527ca6e066db826d79c8b7a0ce00872bafb6ba1c95f2df84
+  source_commit: 0af77ecda91273351302d2b70f4cdccae0845164
 container:
   memory: 8
   memory_swap: 8
