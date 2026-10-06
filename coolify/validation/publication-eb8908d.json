@@ -1,0 +1,15 @@
+{
+  "bytes": 3063711232,
+  "generated_access_material_and_seed_isos_absent": true,
+  "host": "cylo13.ata.ams3.nl.cylo.net",
+  "host_checksum_verified": true,
+  "image": "coolify-ubuntu-26.04-4.3.23-eb8908d44450.qcow2",
+  "image_integrity_verified": true,
+  "kvm_fixture_disks_removed": true,
+  "logs_and_receipt_preserved": true,
+  "original_sealed_build_artifact_preserved": true,
+  "sha256": "b8abec914ed2f935282f4b6ac9f653667d9fa7a4a9e853f40ed33476dd823c3f",
+  "standalone_image": true,
+  "verified_at": "2026-10-06T13:14:36.937530+00:00",
+  "virtual_bytes": 34359738368
+}

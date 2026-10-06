@@ -1,0 +1,42 @@
+{
+  "clones": [
+    {
+      "cold_boot": true,
+      "reboot": true,
+      "root_checks": true,
+      "trim_64gib": true
+    },
+    {
+      "cold_boot": true,
+      "reboot": true,
+      "root_checks": true,
+      "trim_64gib": true
+    }
+  ],
+  "created_at": "2026-10-06T13:04:14.022494+00:00",
+  "fixture_accelerator": "kvm",
+  "fixture_clones_run_sequentially": true,
+  "fixture_disk_filesystem": "ext4",
+  "fixture_host": "cylo13.ata.ams3.nl.cylo.net",
+  "fixture_seed": "nocloud-iso",
+  "grant_18000gib_trim_tested": false,
+  "image_commit": "eb8908d444508c0fc63851a35a46e4285cff3480",
+  "image_sha256": "b8abec914ed2f935282f4b6ac9f653667d9fa7a4a9e853f40ed33476dd823c3f",
+  "independent_generated_state": {
+    "APP_ID": true,
+    "APP_KEY": true,
+    "DB_PASSWORD": true,
+    "PUSHER_APP_ID": true,
+    "PUSHER_APP_KEY": true,
+    "PUSHER_APP_SECRET": true,
+    "REDIS_PASSWORD": true,
+    "localhost_ssh_key": true,
+    "machine_id": true,
+    "ssh_host_key": true,
+    "storage_identity": true
+  },
+  "normal_appbox_callback_tested": false,
+  "public_stream_tls_tested": false,
+  "sealed_image_copy_checksum_verified": true,
+  "validator_commit": "6934006bff3b04571a815fc57ce4e977087d105b"
+}
