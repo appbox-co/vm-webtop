@@ -1,8 +1,7 @@
--- WITHDRAWN: this candidate failed the isolated storage/socket ordering check.
--- Do not register r6; validate the replacement image first.
--- Apply only after the exact image is sealed, copied to the test host and checksum-verified.
+-- Apply only after the exact sealed image passes both fresh clone, trim and reboot checks,
+-- and is copied to the test host with an independently verified checksum.
 -- Supersede the failed admin-only preview with the revised, sealed VM image.
-DO $coolify_r6$
+DO $coolify_r7$
 DECLARE
     affected integer;
     new_version integer;
@@ -19,8 +18,8 @@ BEGIN
         RAISE EXCEPTION 'Expected private Coolify preview changed';
     END IF;
     IF EXISTS (SELECT 1 FROM app_versions WHERE app_id=283
-        AND (tag='4.3.23-ubuntu26.04-baeff2f'
-             OR version='4.3.23 / Ubuntu 26.04 r6')) THEN
+        AND (tag='4.3.23-ubuntu26.04-8fa2432'
+             OR version='4.3.23 / Ubuntu 26.04 r7')) THEN
         RAISE EXCEPTION 'Revised test version already exists';
     END IF;
     INSERT INTO app_versions
@@ -30,9 +29,9 @@ BEGIN
          pids_limit,combined_port_range,combined_dynamic_ports,app_slots,
          min_memory,min_cpus,custom_field_preinstall_description,
          custom_field_postinstall_description)
-    SELECT app_id,'4.3.23 / Ubuntu 26.04 r6','4.3.23-ubuntu26.04-baeff2f',1,1,1,
+    SELECT app_id,'4.3.23 / Ubuntu 26.04 r7','4.3.23-ubuntu26.04-8fa2432',1,1,1,
         'Admin-only test build of Coolify 4.3.23 on Ubuntu 26.04, with fixes for initial setup and reboot. The VM uses an XFS data filesystem for Coolify, Docker and projects. At least 34 GiB of storage is required. Automatic updates are disabled during validation. Add each project hostname to this VM in Appbox before using it in Coolify.',
-        'coolify-ubuntu-26.04-4.3.23-baeff2fb459f.qcow2',
+        'coolify-ubuntu-26.04-4.3.23-8fa243269d6a.qcow2',
         memory,memory_swap,memory_reservation,cpus,init,privileged,cap_add,cap_drop,
         tcp_port_range,udp_port_range,tcp_dynamic_ports,udp_dynamic_ports,
         pids_limit,combined_port_range,combined_dynamic_ports,app_slots,
@@ -50,15 +49,15 @@ BEGIN
     GET DIAGNOSTICS affected = ROW_COUNT;
     IF affected <> 1 THEN RAISE EXCEPTION 'Expected one superseded preview'; END IF;
 
-    UPDATE apps SET "Image"='coolify-ubuntu-26.04-4.3.23-baeff2fb459f.qcow2',
-        version='4.3.23 / Ubuntu 26.04 r6',tag='4.3.23-ubuntu26.04-baeff2f',
+    UPDATE apps SET "Image"='coolify-ubuntu-26.04-4.3.23-8fa243269d6a.qcow2',
+        version='4.3.23 / Ubuntu 26.04 r7',tag='4.3.23-ubuntu26.04-8fa2432',
         updated_at=to_char(now(),'YYYY-MM-DD"T"HH24:MI:SSOF')
     WHERE id=283 AND type='vm' AND admin_only=1
       AND "Image"='coolify-ubuntu-26.04-4.3.23-116e8daa846d.qcow2';
     GET DIAGNOSTICS affected = ROW_COUNT;
     IF affected <> 1 THEN RAISE EXCEPTION 'Expected one private app default'; END IF;
 END;
-$coolify_r6$;
+$coolify_r7$;
 
 SELECT a.id AS app_id,v.id AS version_id,a.admin_only,v.admin_only AS version_admin_only,
        v.version,v.image,v.is_default,v.enabled,v.memory,v.memory_swap,
