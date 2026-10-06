@@ -1,7 +1,10 @@
 [Unit]
 Description=Prepare the Coolify VM data filesystem
+# Docker's socket starts before basic.target. Storage must run that early too.
+DefaultDependencies=no
 After=local-fs.target
-Before=docker.service docker.socket containerd.service
+Conflicts=shutdown.target
+Before=docker.service docker.socket containerd.service shutdown.target
 
 [Service]
 Type=oneshot

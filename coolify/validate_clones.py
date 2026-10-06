@@ -91,13 +91,18 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash):
         'users': [{'name': 'appbox', 'uid': 1000, 'shell': '/bin/bash', 'lock_passwd': True,
                    'sudo': ['ALL=(ALL) NOPASSWD:ALL'], 'groups': ['sudo'],
                    'ssh_authorized_keys': [key.with_suffix('.pub').read_text().strip()]}],
-        'ssh_pwauth': False, 'resize_rootfs': False, 'growpart': {'mode': 'off'},
+        'ssh_pwauth': False, 'ssh_deletekeys': False,
+        # Generate and pin a fresh key before late cloud-final setup can stall.
+        # A single write keeps the marker and public key together on the console.
+        'bootcmd': [['bash', '-c', 'ssh-keygen -A && python3 -c ' + shlex.quote(
+            "import os;from pathlib import Path;fd=os.open('/dev/ttyS0',os.O_WRONLY);"
+            "os.write(fd,b'APPBOX_CLONE_HOST_KEY '+Path('/etc/ssh/ssh_host_ed25519_key.pub').read_bytes());os.close(fd)")]],
+        'resize_rootfs': False, 'growpart': {'mode': 'off'},
         'write_files': [{'path': path, 'content': content, 'permissions': mode, 'owner': 'root:root'}
                         for path, content, mode in files],
         'runcmd': [['update-ca-certificates'], ['systemctl', 'daemon-reload'],
                    ['systemctl', 'enable', 'cylo-callback.service'],
-                   ['systemctl', 'start', '--no-block', 'cylo-callback.service'],
-                   ['bash', '-c', "{ printf 'APPBOX_CLONE_HOST_KEY '; cat /etc/ssh/ssh_host_ed25519_key.pub; } > /dev/ttyS0"]],
+                   ['systemctl', 'start', '--no-block', 'cylo-callback.service']],
     }
     (seed / 'user-data').write_text('#cloud-config\n' + json.dumps(config) + '\n')
     (seed / 'meta-data').write_text(json.dumps({'instance-id': scratch.name + '-' + work.name,

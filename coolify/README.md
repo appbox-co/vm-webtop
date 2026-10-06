@@ -139,7 +139,9 @@ disabled with `/etc/growroot-disabled`; no shared Appbox installer change is
 required. This avoids the first-boot ext4 growth stall observed on grant's
 18000 GiB allocation.
 
-The storage service runs before Docker and containerd. It accepts only the
+The storage service runs before Docker, its early socket, and containerd. It omits
+the normal service dependency on basic.target to avoid a socket ordering cycle,
+and retains explicit filesystem and shutdown ordering. It accepts only the
 sealed image's partition layout and records unique partition and filesystem
 identities before initialization. It refuses a foreign partition or filesystem.
 Later boots mount the same data filesystem and preserve its contents. The
@@ -182,9 +184,9 @@ python3 -m unittest discover -s coolify/tests -v
 python3 coolify/tests/verify_systemd.py --package coolify
 ```
 
-The Linux ordering check reproduces the previous reboot cycle against a generic
-Appbox callback fixture and requires the corrected graph to pass without cycle
-warnings. The image callback drop-in avoids holding `multi-user.target` while it
+The Linux ordering check reproduces the previous callback reboot cycle and the
+Docker socket/storage cycle. It loads the socket through sockets.target and
+requires the corrected graph to pass without cycle warnings. The image callback drop-in avoids holding `multi-user.target` while it
 waits for `cloud-final.service`, and retains explicit basic/shutdown ordering.
 
 The tests exercise environment parsing, persistence, certificate/key matching,
