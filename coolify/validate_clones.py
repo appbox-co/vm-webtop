@@ -124,9 +124,19 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image, accelera
     (seed / 'vendor-data').write_text('#cloud-config\n{}\n')
     (seed / 'network-config').write_text(json.dumps({'version': 2, 'ethernets': {
         'fixture': {'match': {'name': 'en*'}, 'dhcp4': True}}}) + '\n')
-    server = http.server.ThreadingHTTPServer(('127.0.0.1', 0),
-                                             functools.partial(QuietHandler, directory=str(seed)))
-    threading.Thread(target=server.serve_forever, daemon=True).start()
+    server = None
+    seed_image = None
+    if accelerator == 'kvm':
+        seed_image = scratch / 'seed.iso'
+        run(['cloud-localds', '--network-config', str(seed / 'network-config'),
+             str(seed_image), str(seed / 'user-data'), str(seed / 'meta-data')])
+        seed_image.chmod(0o600)
+        seed_arguments = ['-cdrom', str(seed_image)]
+    else:
+        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0),
+                                                 functools.partial(QuietHandler, directory=str(seed)))
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        seed_arguments = ['-smbios', f'type=1,serial=ds=nocloud;s=http://172.20.35.1:{server.server_port}/']
     with socket.socket() as probe:
         probe.bind(('127.0.0.1', 0))
         port = probe.getsockname()[1]
@@ -140,7 +150,7 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image, accelera
             '-drive', f'file={disk},if=virtio,format=qcow2,discard=unmap',
             '-netdev', f'user,id=fixture,net=172.20.35.0/24,host=172.20.35.1,dhcpstart=172.20.35.15,hostfwd=tcp:127.0.0.1:{port}-:22',
             '-device', 'virtio-net-pci,netdev=fixture',
-            '-smbios', f'type=1,serial=ds=nocloud;s=http://172.20.35.1:{server.server_port}/',
+            *seed_arguments,
             '-display', 'none', '-monitor', 'none',
             '-serial', f'file:{scratch / ("console-" + str(index) + ".log")}', '-no-reboot',
         ], stdout=subprocess.DEVNULL, stderr=(scratch / f'qemu-{index}.log').open('wb'))
@@ -209,8 +219,9 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image, accelera
         return {'fingerprints': first['fingerprints'], 'cold_boot': True, 'reboot': True,
                 'trim_64gib': True, 'root_checks': True}
     finally:
-        server.shutdown()
-        server.server_close()
+        if server is not None:
+            server.shutdown()
+            server.server_close()
         if qemu and qemu.poll() is None:
             qemu.terminate()
             try:
@@ -221,6 +232,8 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image, accelera
         # Only access material generated under this newly created clone directory.
         for path in (key, key.with_suffix('.pub'), leaf_key, seed / 'user-data'):
             path.unlink(missing_ok=True)
+        if seed_image is not None:
+            seed_image.unlink(missing_ok=True)
 
 
 def main():
@@ -237,6 +250,8 @@ def main():
     else:
         assert socket.getfqdn() == 'cylo13.ata.ams3.nl.cylo.net' and os.geteuid() == 0
         assert Path('/dev/kvm').is_char_device() and os.access('/dev/kvm', os.R_OK | os.W_OK)
+        if shutil.which('cloud-localds') is None:
+            raise RuntimeError('Hardware preflight requires the installed cloud-localds tool.')
         available = next(int(line.split()[1]) for line in Path('/proc/meminfo').read_text().splitlines() if line.startswith('MemAvailable:'))
         if available < 16 * 1024**2:
             raise RuntimeError('Hardware preflight requires at least 16 GiB available memory.')
@@ -288,6 +303,7 @@ def main():
             'image_commit': receipt['commit'], 'image_sha256': receipt['image_sha256'],
             'fixture_disk_filesystem': disk_filesystem,
             'fixture_accelerator': args.accelerator,
+            'fixture_seed': 'nocloud-iso' if args.accelerator == 'kvm' else 'http',
             'fixture_clones_run_sequentially': True,
             'sealed_image_copy_checksum_verified': True,
             'clones': [{k: v for k, v in result.items() if k != 'fingerprints'} for result in results],

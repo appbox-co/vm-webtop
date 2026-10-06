@@ -224,6 +224,9 @@ restricted to root on the verified grant host `cylo13.ata.ams3.nl.cylo.net`, wit
 a root-owned private staging directory under `/var/tmp`, local scratch storage
 and at least 16 GiB available memory. It runs the same two sequential 4-CPU,
 8-GiB guests using hardware virtualization, with SSH forwarded on loopback only.
+The hardware fixture attaches a local NoCloud seed ISO using the installed
+`cloud-localds`, as the normal Appbox installer does. Its generated ISO contains
+only disposable fixture data and is removed with the access material.
 It does not register libvirt domains, change shared services or publish an image.
 It accepts a verified sealed-image receipt and a synthetic test bcrypt
 hash, boots two fresh 64 GiB scratch overlays sequentially with SSH exposed on
