@@ -1,0 +1,56 @@
+{
+  "accelerator": "tcg,thread=multi",
+  "archive_sha256": "00c4fb5d8da35e9a9091537c61aa3b1078da69e37157db3f1cb68884cd9afed3",
+  "base_sha256": "8800651811af9a85465ad1d552add729947bb16488dddb4a9b5305a3d97332b2",
+  "base_url": "https://cloud-images.ubuntu.com/releases/26.04/release/ubuntu-26.04-server-cloudimg-amd64.img",
+  "build_method": "verified-sealed-template-rebuild",
+  "builder_hostname": "builder.grant.appboxes.co",
+  "callback_boot_graph": {
+    "corrected_boot_graph_passed": true,
+    "corrected_exit": 0,
+    "previous_cycle_reproduced": true,
+    "previous_exit": 0
+  },
+  "commit": "baeff2fb459f00de5d4337fe8e20e74aa31b28a8",
+  "coolify_health_requires_upstream_initialization": true,
+  "created_at": "2026-10-06T08:31:00.804207+00:00",
+  "image": "coolify-ubuntu-26.04-4.3.23-baeff2fb459f.qcow2",
+  "image_bytes": 3063711232,
+  "image_sha256": "20bf76248b843e6f62a8218452a81d7ecfc97ce6a00cb99b09ff84f21cef3bc0",
+  "initial_trim_requires_coolify_ready": true,
+  "next_boot_kernel": "/boot/vmlinuz-7.0.0-38-generic",
+  "normal_appbox_install_tested": false,
+  "os_packages": {
+    "cloud-init": "26.1-0ubuntu3~26.04.1",
+    "e2fsprogs": "1.47.2-3ubuntu4",
+    "linux-image-7.0.0-34-generic": "7.0.0-34.34",
+    "linux-image-7.0.0-38-generic": "7.0.0-38.38"
+  },
+  "parent_template": {
+    "commit": "116e8daa846d439df47fba676ba21e84f8e79c3f",
+    "sha256": "1e75b1618cc8a32ad1ad1e098e7cc6ac9ed420efbc93591a946fbfffc404989b"
+  },
+  "storage_layout": {
+    "data_filesystem": "xfs",
+    "data_uses_remaining_disk": true,
+    "os_disk_bytes": 34359738368
+  },
+  "upstream_images": {
+    "coollabsio/coolify-realtime:1.0.19": [
+      "coollabsio/coolify-realtime@sha256:087c9d263ab0154d68d40c900bf729a8b59a262bd73d8407c2d1104b70cfdedf"
+    ],
+    "coollabsio/coolify:4.3.23": [
+      "coollabsio/coolify@sha256:79d5c0443696f2fcb280a4d5a15fcc091a51784e566ab212889a08e424d8187c"
+    ],
+    "postgres:15-alpine": [
+      "postgres@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81"
+    ],
+    "redis:7-alpine": [
+      "redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499"
+    ],
+    "traefik:v3.6": [
+      "traefik@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d"
+    ]
+  },
+  "virtual_bytes": 34359738368
+}
