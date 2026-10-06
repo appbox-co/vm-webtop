@@ -209,6 +209,17 @@ Required checks before publication and catalogue launch:
   persist. Exercise the validated application upgrade with the same data.
 - Run the ownership, shutdown and Docker service checks as root inside the VM.
 
+`coolify/validate_clones.py` performs the isolated clone preflight on the designated
+builder. It accepts a verified sealed-image receipt and a synthetic test bcrypt
+hash, boots two 64 GiB scratch overlays with SSH exposed on loopback only, and
+uses a private fixture CA. It checks cold setup, root ownership, administrator
+role, disabled registration and automatic updates, actual trimming, and a
+subsequent reboot with independent secrets and preserved account state. Only
+comparison booleans enter its receipt. The callback is a local fixture, so this
+check does not prove the normal Appbox callback, public stream TLS, or trimming
+on grant's 18000 GiB allocation. Never supply a customer credential as its
+fixture hash or publish an initialized clone disk.
+
 Any missing required check leaves release readiness unconfirmed. Do not reuse
 the desktop template-conversion script unchanged: it expects Selkies services.
 
