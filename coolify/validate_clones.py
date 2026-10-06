@@ -164,6 +164,10 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash):
         ssh = ['ssh', '-p', str(port), '-i', str(key), '-oIdentitiesOnly=yes', '-oBatchMode=yes',
                '-oStrictHostKeyChecking=yes', '-oUserKnownHostsFile=' + str(known),
                '-oConnectTimeout=5', 'appbox@127.0.0.1']
+        def ssh_ready():
+            run(ssh + ['sudo -n true'], timeout=15)
+            return True
+        wait(ssh_ready, 1200)
         run(ssh + ['sudo -n cloud-init status --wait'], timeout=1200)
         command = 'sudo -n python3 -c ' + shlex.quote(ROOT_CHECK)
         def check():
