@@ -219,7 +219,13 @@ logs and receipts; nested guest disk I/O there exceeded the storage timeout.
 Scratch disks are retained for diagnosis and must be removed after the tests.
 
 `coolify/validate_clones.py` performs the isolated clone preflight on the designated
-builder. It accepts a verified sealed-image receipt and a synthetic test bcrypt
+builder by default. The explicitly selected `--accelerator kvm` preflight is
+restricted to root on the verified grant host `cylo13.ata.ams3.nl.cylo.net`, with
+a root-owned private staging directory under `/var/tmp`, local scratch storage
+and at least 16 GiB available memory. It runs the same two sequential 4-CPU,
+8-GiB guests using hardware virtualization, with SSH forwarded on loopback only.
+It does not register libvirt domains, change shared services or publish an image.
+It accepts a verified sealed-image receipt and a synthetic test bcrypt
 hash, boots two fresh 64 GiB scratch overlays sequentially with SSH exposed on
 loopback only, and uses a private fixture CA. Concurrent software-emulated
 guests exceeded startup limits during cache copying and container initialization;

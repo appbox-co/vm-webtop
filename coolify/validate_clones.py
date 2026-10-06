@@ -70,7 +70,7 @@ print(json.dumps({'fingerprints':fingerprints,'account_name':account['name'],'bo
 """
 
 
-def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image):
+def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image, accelerator):
     scratch = work / f'clone-{number}'
     scratch.mkdir(mode=0o700)
     # The builder's virtiofs home share showed high I/O pressure during
@@ -130,12 +130,12 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image):
     with socket.socket() as probe:
         probe.bind(('127.0.0.1', 0))
         port = probe.getsockname()[1]
-    accelerator = 'kvm' if os.access('/dev/kvm', os.R_OK | os.W_OK) else 'tcg,thread=multi'
+    qemu_accelerator = 'kvm' if accelerator == 'kvm' else 'tcg,thread=multi'
     qemu = None
 
     def boot(index):
         return subprocess.Popen([
-            'qemu-system-x86_64', '-machine', 'q35', '-accel', accelerator,
+            'qemu-system-x86_64', '-machine', 'q35', '-accel', qemu_accelerator,
             '-cpu', 'host' if accelerator == 'kvm' else 'max', '-smp', '4', '-m', '8192',
             '-drive', f'file={disk},if=virtio,format=qcow2,discard=unmap',
             '-netdev', f'user,id=fixture,net=172.20.35.0/24,host=172.20.35.1,dhcpstart=172.20.35.15,hostfwd=tcp:127.0.0.1:{port}-:22',
@@ -229,12 +229,27 @@ def main():
     parser.add_argument('--work-dir', type=Path, required=True)
     # A synthetic test hash, never an operator or customer credential.
     parser.add_argument('--fixture-hash', required=True)
+    parser.add_argument('--accelerator', choices=('tcg', 'kvm'), default='tcg')
     args = parser.parse_args()
     args.receipt = args.receipt.resolve()
-    assert socket.getfqdn() == 'builder.grant.appboxes.co' and os.geteuid() != 0
+    if args.accelerator == 'tcg':
+        assert socket.getfqdn() == 'builder.grant.appboxes.co' and os.geteuid() != 0
+    else:
+        assert socket.getfqdn() == 'cylo13.ata.ams3.nl.cylo.net' and os.geteuid() == 0
+        assert Path('/dev/kvm').is_char_device() and os.access('/dev/kvm', os.R_OK | os.W_OK)
+        available = next(int(line.split()[1]) for line in Path('/proc/meminfo').read_text().splitlines() if line.startswith('MemAvailable:'))
+        if available < 16 * 1024**2:
+            raise RuntimeError('Hardware preflight requires at least 16 GiB available memory.')
     assert re.fullmatch(r'\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}', args.fixture_hash)
     work = args.work_dir.resolve()
-    assert work.parent == Path('/home/appbox/builds') and work.name.startswith('coolify-clones-')
+    assert work.name.startswith('coolify-clones-')
+    if args.accelerator == 'tcg':
+        assert work.parent == Path('/home/appbox/builds')
+    else:
+        staging = args.receipt.parent.parent
+        assert work.parent == staging and staging.parent == Path('/var/tmp')
+        assert re.fullmatch(r'coolify-kvm-preflight-[a-f0-9]{7}-[A-Za-z0-9_]{8}', staging.name)
+        assert staging.stat().st_uid == 0 and staging.stat().st_mode & 0o777 == 0o700
     work.mkdir(mode=0o700)
     receipt = json.loads(args.receipt.read_text())
     image = args.receipt.parent / receipt['image']
@@ -264,7 +279,7 @@ def main():
         # their cache copies and container initialization competed for I/O.
         # Each clone still boots a fresh overlay and retains every runtime gate.
         results = [clone(args.receipt, work, number, ca, ca_key,
-                         args.fixture_hash, local_image) for number in (1, 2)]
+                         args.fixture_hash, local_image, args.accelerator) for number in (1, 2)]
         independence = {key: results[0]['fingerprints'][key] != results[1]['fingerprints'][key]
                         for key in results[0]['fingerprints']}
         assert all(independence.values())
@@ -272,6 +287,7 @@ def main():
             'created_at': datetime.now(timezone.utc).isoformat(),
             'image_commit': receipt['commit'], 'image_sha256': receipt['image_sha256'],
             'fixture_disk_filesystem': disk_filesystem,
+            'fixture_accelerator': args.accelerator,
             'fixture_clones_run_sequentially': True,
             'sealed_image_copy_checksum_verified': True,
             'clones': [{k: v for k, v in result.items() if k != 'fingerprints'} for result in results],
