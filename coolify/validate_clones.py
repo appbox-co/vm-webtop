@@ -35,6 +35,10 @@ from pathlib import Path
 assert os.geteuid()==0
 assert socket.gethostname() in ('coolify-clone-1','coolify-clone-2')
 units={name:dict(line.split('=',1) for line in subprocess.check_output(['systemctl','show',name,'-p','ActiveState','-p','Result','-p','ExecMainStatus'],text=True).splitlines()) for name in ('appbox-coolify.service','docker.service','appbox-coolify-storage.service','cylo-callback.service')}
+boot_log=subprocess.check_output(['journalctl','-b','--no-pager','-o','cat'],text=True).splitlines()
+cycle_lines=[line for line in boot_log if 'ordering cycle' in line or ('Job ' in line and 'deleted' in line)]
+if cycle_lines:
+ print(json.dumps({'terminal_failure':True,'boot_ordering_cycle':True,'units':units}));raise SystemExit(0)
 if any(state['ActiveState']=='failed' for state in units.values()):
  allowed={'Coolify initialization completed; provisioning the account and proxy.','Coolify account and proxy prepared; verifying HTTPS.','Coolify administrator, HTTPS endpoint and proxy are ready.','Required docker command failed.','Required curl command failed.'}
  lines=subprocess.check_output(['journalctl','-b','--no-pager','-u','appbox-coolify.service','-o','cat'],text=True).splitlines()
