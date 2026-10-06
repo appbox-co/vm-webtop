@@ -28,7 +28,8 @@ services:
       redis: {condition: service_healthy}
       soketi: {condition: service_healthy}
     healthcheck:
-      test: [CMD, curl, --fail, --silent, http://127.0.0.1:8080/api/health]
+      # The HTTP endpoint returns OK before migrations and seeders finish.
+      test: [CMD-SHELL, '/command/s6-rc -a list | grep -qx init-script && curl --fail --silent http://127.0.0.1:8080/api/health >/dev/null']
       interval: 5s
       timeout: 2s
       retries: 60

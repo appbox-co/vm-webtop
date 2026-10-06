@@ -87,7 +87,10 @@ password or email changes made in Coolify survive a reboot.
 First boot creates independent application secrets and a localhost SSH key.
 It starts the dashboard on VM loopback, creates the root administrator with
 the installation bcrypt hash, checks its owner role and disables registration.
-The dashboard route is configured after account setup. The VM callback depends
+The Compose health check waits for the upstream `init-script` service, which runs
+after migrations and seeding, as well as HTTP health. The HTTP endpoint alone
+returns success before initialization finishes. The dashboard route is configured
+after account setup. The VM callback depends
 on this setup and successful HTTPS verification, so a provisioning failure
 cannot report installation success.
 
@@ -175,7 +178,14 @@ shellcheck coolify/install.sh coolify/moduser.sh
 bash -n coolify/install.sh coolify/moduser.sh
 php -l coolify/provision.php
 python3 -m unittest discover -s coolify/tests -v
+# Linux only, required before each image release:
+python3 coolify/tests/verify_systemd.py --package coolify
 ```
+
+The Linux ordering check reproduces the previous reboot cycle against a generic
+Appbox callback fixture and requires the corrected graph to pass without cycle
+warnings. The image callback drop-in avoids holding `multi-user.target` while it
+waits for `cloud-final.service`, and retains explicit basic/shutdown ordering.
 
 The tests exercise environment parsing, persistence, certificate/key matching,
 wildcard coverage, renewal, private-file permissions, both Compose files and

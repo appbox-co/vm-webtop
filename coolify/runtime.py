@@ -276,10 +276,12 @@ def bootstrap():
         run(['docker', 'network', 'create', '--attachable', 'coolify'])
     compose('up', '-d', '--wait', '--wait-timeout', '600')
     wait_for_health()
+    print('Coolify initialization completed; provisioning the account and proxy.', flush=True)
     provision({'operation': 'provision', 'initial': initial, 'domain': domain,
                'email': email, 'password_hash': password_hash,
                'proxy_configuration': (DATA / 'proxy/docker-compose.yml').read_text()})
     # Verify TLS with normal trust and SNI; a self-signed fallback fails this gate.
+    print('Coolify account and proxy prepared; verifying HTTPS.', flush=True)
     run(['curl', '--fail', '--silent', '--show-error', '--max-time', '30',
          '--resolve', f'{domain}:443:127.0.0.1', '-o', '/dev/null', f'https://{domain}/login'], timeout=35)
     write_atomic(ready, json.dumps({'domain': domain, 'version': '4.3.23'}).encode() + b'\n')

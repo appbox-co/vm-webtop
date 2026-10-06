@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 import tempfile
 import unittest
@@ -230,6 +231,40 @@ class ComposeTests(unittest.TestCase):
         self.assertEqual(len(services['coolify']['ports']), 1)
         for service in ('postgres', 'redis', 'soketi'):
             self.assertNotIn('ports', services[service])
+
+    def test_http_success_cannot_bypass_unfinished_initialization(self):
+        health = self.compose_config('compose.yaml')['services']['coolify']['healthcheck']['test']
+        self.assertEqual(health[0], 'CMD-SHELL')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            supervisor = root / 's6-rc'
+            supervisor.write_text('#!/bin/sh\n[ "$*" = "-a list" ] || exit 100\n'
+                                  'printf "%s\\n" "$APPBOX_FIXTURE_SERVICES"\n'
+                                  'exit "$APPBOX_FIXTURE_S6_EXIT"\n')
+            curl = root / 'curl'
+            curl.write_text('#!/bin/sh\ntouch "$APPBOX_FIXTURE_HTTP_CALLED"\n'
+                            'exit "$APPBOX_FIXTURE_HTTP_EXIT"\n')
+            for executable in (supervisor, curl):
+                executable.chmod(0o700)
+            # Change only the absolute executable location for this local fixture.
+            command = health[1].replace('/command/s6-rc', shlex.quote(str(supervisor)))
+            cases = [('nginx\nphp-fpm', 0, 0, False, False),
+                     ('nginx\nphp-fpm\ninit-script', 0, 0, True, True),
+                     ('', 4, 0, False, False),
+                     ('init-script', 0, 22, False, True)]
+            for services, supervisor_exit, http_exit, healthy, http_called in cases:
+                with self.subTest(services=services, supervisor_exit=supervisor_exit, http_exit=http_exit):
+                    marker = root / 'http-called'
+                    marker.unlink(missing_ok=True)
+                    environment = dict(os.environ, PATH=str(root) + os.pathsep + os.environ['PATH'],
+                                       APPBOX_FIXTURE_SERVICES=services,
+                                       APPBOX_FIXTURE_S6_EXIT=str(supervisor_exit),
+                                       APPBOX_FIXTURE_HTTP_EXIT=str(http_exit),
+                                       APPBOX_FIXTURE_HTTP_CALLED=str(marker))
+                    result = subprocess.run(['sh', '-c', command], env=environment,
+                                            capture_output=True, timeout=5)
+                    self.assertEqual(result.returncode == 0, healthy)
+                    self.assertEqual(marker.exists(), http_called)
 
     def test_proxy_preserves_tcp_tls_and_avoids_http_validation(self):
         proxy = self.compose_config('proxy.yaml')['services']['traefik']

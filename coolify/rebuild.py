@@ -47,9 +47,13 @@ def main():
         for relative in ('runtime.py', 'provision.php', 'compose.yaml', 'proxy.yaml',
                          'template_mounts.py', 'storage.py', 'moduser.sh',
                          'systemd/storage.conf', 'systemd/appbox-coolify-storage.service',
-                         'systemd/fstrim.conf'):
+                         'systemd/fstrim.conf', 'systemd/appbox-coolify.service',
+                         'systemd/callback.conf', 'tests/verify_systemd.py'):
             if source.extractfile('coolify/' + relative).read() != (package / relative).read_bytes():
                 raise RuntimeError('Build source differs from the supplied archive')
+    print('Verifying the package boot graph against the Appbox callback.', flush=True)
+    ordering = json.loads(run(['python3', str(package / 'tests/verify_systemd.py'),
+                              '--package', str(package)]))
     output = work / 'artifacts'
     output.mkdir(mode=0o700)
     disk = work / 'prepared.qcow2'
@@ -70,6 +74,11 @@ def main():
         destination = '/etc/systemd/system/' + unit + '.d'
         command += ['--mkdir', destination, '--upload', str(package / 'systemd/storage.conf') + ':' + destination + '/coolify-storage.conf',
                     '--chmod', '0644:' + destination + '/coolify-storage.conf']
+    command += ['--upload', str(package / 'systemd/appbox-coolify.service') + ':/etc/systemd/system/appbox-coolify.service',
+                '--chmod', '0644:/etc/systemd/system/appbox-coolify.service',
+                '--mkdir', '/etc/systemd/system/cylo-callback.service.d',
+                '--upload', str(package / 'systemd/callback.conf') + ':/etc/systemd/system/cylo-callback.service.d/coolify.conf',
+                '--chmod', '0644:/etc/systemd/system/cylo-callback.service.d/coolify.conf']
     command += ['--mkdir', '/etc/systemd/system/fstrim.service.d',
                 '--upload', str(package / 'systemd/fstrim.conf') + ':/etc/systemd/system/fstrim.service.d/coolify-first-boot.conf',
                 '--chmod', '0644:/etc/systemd/system/fstrim.service.d/coolify-first-boot.conf']
@@ -81,6 +90,8 @@ def main():
     checks.mkdir(mode=0o700)
     files = ('runtime.py', 'provision.php', 'compose.yaml', 'proxy.yaml', 'template_mounts.py', 'storage.py')
     commands = ''.join(f'download /usr/local/lib/appbox-coolify/{relative} {checks / relative}\n' for relative in files)
+    commands += f'download /etc/systemd/system/appbox-coolify.service {checks / "setup.service"}\n'
+    commands += f'download /etc/systemd/system/cylo-callback.service.d/coolify.conf {checks / "callback.conf"}\n'
     commands += f'download /etc/fstab {checks / "fstab"}\n'
     commands += f'download /etc/systemd/system/appbox-coolify-storage.service {checks / "storage.service"}\n'
     commands += f'download /etc/systemd/system/fstrim.service.d/coolify-first-boot.conf {checks / "fstrim.conf"}\n'
@@ -101,6 +112,10 @@ def main():
     for unit in ('docker.service', 'docker.socket', 'containerd.service'):
         if (checks / unit).read_bytes() != (package / 'systemd/storage.conf').read_bytes():
             raise RuntimeError('Saved storage dependency differs from the archive')
+    for saved, relative in (('setup.service', 'systemd/appbox-coolify.service'),
+                            ('callback.conf', 'systemd/callback.conf')):
+        if (checks / saved).read_bytes() != (package / relative).read_bytes():
+            raise RuntimeError('Saved setup/callback unit differs from the archive')
     fstab = (checks / 'fstab').read_text()
     root = [line.split() for line in fstab.splitlines() if line.strip() and not line.startswith('#') and line.split()[1] == '/']
     if len(root) != 1 or 'discard' in root[0][3].split(','):
@@ -121,6 +136,8 @@ def main():
     record['storage_layout'] = {'os_disk_bytes': 34359738368, 'data_filesystem': 'xfs',
                                 'data_uses_remaining_disk': True}
     record['initial_trim_requires_coolify_ready'] = True
+    record['coolify_health_requires_upstream_initialization'] = True
+    record['callback_boot_graph'] = ordering
     (output / 'build.json').write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
     print(json.dumps(record, indent=2, sort_keys=True), flush=True)
 
