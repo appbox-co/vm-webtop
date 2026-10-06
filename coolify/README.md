@@ -226,7 +226,9 @@ guests exceeded startup limits during cache copying and container initialization
 sequential execution retains the image and every timeout. It checks cold setup, root ownership, administrator
 role, disabled registration and automatic updates, actual trimming, and a
 subsequent reboot with independent secrets and preserved account state. Only
-comparison booleans enter its receipt. The callback is a local fixture, so this
+comparison booleans enter its receipt. Localhost key persistence is checked
+against Coolify's canonical database key, rather than the bootstrap key filename.
+The callback is a local fixture, so this
 check does not prove the normal Appbox callback, public stream TLS, or trimming
 on grant's 18000 GiB allocation. Never supply a customer credential as its
 fixture hash or publish an initialized clone disk.

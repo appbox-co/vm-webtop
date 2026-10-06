@@ -58,11 +58,14 @@ assert Path('/data/coolify/source/.env').stat().st_uid==9999
 assert Path('/data/coolify/source/.env').stat().st_mode&0o777==0o600
 states=dict(line.split(':',1) for line in subprocess.check_output(['docker','ps','--format','{{.Names}}:{{.State}}'],text=True).splitlines())
 assert all(states.get(name)=='running' for name in ('coolify','coolify-db','coolify-redis','coolify-realtime','coolify-proxy'))
-php=r'''require '/var/www/html/vendor/autoload.php';$app=require '/var/www/html/bootstrap/app.php';$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();$u=App\Models\User::findOrFail(0);$s=App\Models\InstanceSettings::findOrFail(0);echo json_encode(['owner'=>$u->teams()->where('teams.id',0)->wherePivot('role','owner')->exists(),'registration_disabled'=>!$s->is_registration_enabled,'automatic_updates_disabled'=>!$s->is_auto_update_enabled,'name'=>$u->name]);'''
+php=r'''require '/var/www/html/vendor/autoload.php';$app=require '/var/www/html/bootstrap/app.php';$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();$u=App\Models\User::findOrFail(0);$s=App\Models\InstanceSettings::findOrFail(0);$key=App\Models\PrivateKey::findOrFail(0);if(!is_string($key->private_key)||$key->private_key===''||(string)App\Models\Server::findOrFail(0)->private_key_id!=='0'){throw new RuntimeException('Missing canonical localhost SSH key');}echo json_encode(['localhost_ssh_key_sha256'=>hash('sha256',$key->private_key),'owner'=>$u->teams()->where('teams.id',0)->wherePivot('role','owner')->exists(),'registration_disabled'=>!$s->is_registration_enabled,'automatic_updates_disabled'=>!$s->is_auto_update_enabled,'name'=>$u->name]);'''
 account=json.loads(subprocess.check_output(['docker','exec','coolify','php','-r',php],text=True))
 assert account['owner'] and account['registration_disabled'] and account['automatic_updates_disabled']
 fingerprints={k:hashlib.sha256(env[k].encode()).hexdigest() for k in ('APP_ID','APP_KEY','DB_PASSWORD','REDIS_PASSWORD','PUSHER_APP_ID','PUSHER_APP_KEY','PUSHER_APP_SECRET')}
-for k,path in {'localhost_ssh_key':'/data/coolify/ssh/keys/id.root@host.docker.internal','ssh_host_key':'/etc/ssh/ssh_host_ed25519_key.pub','machine_id':'/etc/machine-id','storage_identity':'/var/lib/appbox-coolify/storage.json'}.items():fingerprints[k]=hashlib.sha256(Path(path).read_bytes()).hexdigest()
+# Coolify persists its active localhost key in PrivateKey 0; the bootstrap
+# key filename is not a reliable persisted identity after initialization.
+fingerprints['localhost_ssh_key']=account['localhost_ssh_key_sha256']
+for k,path in {'ssh_host_key':'/etc/ssh/ssh_host_ed25519_key.pub','machine_id':'/etc/machine-id','storage_identity':'/var/lib/appbox-coolify/storage.json'}.items():fingerprints[k]=hashlib.sha256(Path(path).read_bytes()).hexdigest()
 print(json.dumps({'fingerprints':fingerprints,'account_name':account['name'],'boot_id':Path('/proc/sys/kernel/random/boot_id').read_text().strip(),'root_checks_passed':True}))
 """
 
