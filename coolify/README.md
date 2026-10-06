@@ -220,8 +220,10 @@ Scratch disks are retained for diagnosis and must be removed after the tests.
 
 `coolify/validate_clones.py` performs the isolated clone preflight on the designated
 builder. It accepts a verified sealed-image receipt and a synthetic test bcrypt
-hash, boots two 64 GiB scratch overlays with SSH exposed on loopback only, and
-uses a private fixture CA. It checks cold setup, root ownership, administrator
+hash, boots two fresh 64 GiB scratch overlays sequentially with SSH exposed on
+loopback only, and uses a private fixture CA. Concurrent software-emulated
+guests exceeded startup limits during cache copying and container initialization;
+sequential execution retains the image and every timeout. It checks cold setup, root ownership, administrator
 role, disabled registration and automatic updates, actual trimming, and a
 subsequent reboot with independent secrets and preserved account state. Only
 comparison booleans enter its receipt. The callback is a local fixture, so this

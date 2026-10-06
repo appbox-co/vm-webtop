@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Validate two disposable, isolated clones of a sealed Coolify image."""
 import argparse
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import functools
 import hashlib
@@ -258,9 +257,11 @@ def main():
          '-nodes', '-days', '2', '-subj', '/CN=Disposable Coolify fixture CA',
          '-keyout', str(ca_key), '-out', str(ca)])
     try:
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            results = list(pool.map(lambda n: clone(args.receipt, work, n, ca, ca_key,
-                                                    args.fixture_hash, local_image), [1, 2]))
+        # Nested software-emulated guests exhausted cold-start limits when
+        # their cache copies and container initialization competed for I/O.
+        # Each clone still boots a fresh overlay and retains every runtime gate.
+        results = [clone(args.receipt, work, number, ca, ca_key,
+                         args.fixture_hash, local_image) for number in (1, 2)]
         independence = {key: results[0]['fingerprints'][key] != results[1]['fingerprints'][key]
                         for key in results[0]['fingerprints']}
         assert all(independence.values())
@@ -268,6 +269,7 @@ def main():
             'created_at': datetime.now(timezone.utc).isoformat(),
             'image_commit': receipt['commit'], 'image_sha256': receipt['image_sha256'],
             'fixture_disk_filesystem': disk_filesystem,
+            'fixture_clones_run_sequentially': True,
             'sealed_image_copy_checksum_verified': True,
             'clones': [{k: v for k, v in result.items() if k != 'fingerprints'} for result in results],
             'independent_generated_state': independence, 'normal_appbox_callback_tested': False,
