@@ -74,9 +74,11 @@ BEGIN
         ('app',new_app,'SERVER_ADDR','SSH host','staticText','%DOMAIN.DOMAIN%',0,
          '{"showOnInstalled":true}','instance',0,NULL,3,6,false,false),
         ('app',new_app,'SSH_PORT','SSH port','staticText','%PORTS|0.EXTERNAL%',0,
-         '{"showOnInstalled":true}','instance',0,NULL,4,6,false,false);
+         '{"showOnInstalled":true}','instance',0,NULL,4,6,false,false),
+        ('app',new_app,'URL','Web UI','externalURL','https://%DOMAIN.DOMAIN%',0,
+         '{"showOnInstalled":true}','instance',0,NULL,5,12,false,false);
     GET DIAGNOSTICS affected = ROW_COUNT;
-    IF affected <> 5 THEN RAISE EXCEPTION 'Expected five custom fields'; END IF;
+    IF affected <> 6 THEN RAISE EXCEPTION 'Expected six custom fields'; END IF;
 
     INSERT INTO links (type,relid1,relid2)
     SELECT 'appcategory',new_app,id FROM appcategories WHERE id IN (16,27,29);

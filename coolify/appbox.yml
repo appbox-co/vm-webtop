@@ -79,3 +79,9 @@ custom_fields:
     default_value: '%PORTS|0.EXTERNAL%'
     template_type: instance
     params: {showOnInstalled: true}
+  URL:
+    label: Web UI
+    type: externalURL
+    default_value: 'https://%DOMAIN.DOMAIN%'
+    template_type: instance
+    params: {showOnInstalled: true}
