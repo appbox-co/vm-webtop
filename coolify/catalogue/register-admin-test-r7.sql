@@ -1,3 +1,4 @@
+-- WITHDRAWN: both r7 cold-clone runs failed HTTPS; do not apply.
 -- Apply only after the exact sealed image passes both fresh clone, trim and reboot checks,
 -- and is copied to the test host with an independently verified checksum.
 -- Supersede the failed admin-only preview with the revised, sealed VM image.

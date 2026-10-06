@@ -67,9 +67,9 @@ try {
         });
         $server = App\Models\Server::findOrFail(0);
         $server->setupDynamicProxyConfiguration();
-        if (App\Actions\Proxy\CheckProxy::run($server)) {
-            App\Actions\Proxy\StartProxy::run($server, false);
-        }
+        // ProductionSeeder already queues the localhost proxy start before
+        // init-script becomes healthy. A second start can stop/recreate that
+        // same container. The host waits for verified HTTPS before readiness.
     } else {
         throw new RuntimeException('Unknown operation');
     }

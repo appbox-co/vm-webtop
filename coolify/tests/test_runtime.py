@@ -1,12 +1,16 @@
 import importlib.util
 import io
+import http.server
 import json
 import os
 from pathlib import Path
 import shutil
 import shlex
+import socket
+import ssl
 import subprocess
 import tempfile
+import threading
 import unittest
 from unittest.mock import DEFAULT, patch
 
@@ -342,6 +346,100 @@ class BootstrapTests(unittest.TestCase):
         self.assertFalse(payload['initial'])
         self.assertIsNone(payload['email'])
         self.assertIsNone(payload['password_hash'])
+
+
+    def real_https_fixture(self, *, trusted, delayed):
+        root = Path(self.directory.name) / 'https'
+        root.mkdir()
+        openssl = str(Path('/opt/homebrew/opt/openssl@3/bin/openssl'))
+        if not Path(openssl).is_file():
+            openssl = shutil.which('openssl')
+        if not openssl or not shutil.which('curl'):
+            raise RuntimeError('OpenSSL and curl are required; HTTPS coverage cannot be skipped.')
+        cert, key = root / 'fixture.cer', root / 'fixture.key'
+        subprocess.run([openssl, 'req', '-x509', '-newkey', 'ec', '-pkeyopt',
+                        'ec_paramgen_curve:prime256v1', '-nodes', '-days', '1',
+                        '-subj', '/CN=coolify.example.test', '-addext',
+                        'subjectAltName=DNS:coolify.example.test',
+                        '-keyout', str(key), '-out', str(cert)],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        with socket.socket() as probe:
+            probe.bind(('127.0.0.1', 0))
+            port = probe.getsockname()[1]
+        stop, listening = threading.Event(), threading.Event()
+        observations, server_errors = [], []
+        ready = self.ready
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                observations.append((self.path, ready.exists()))
+                self.send_response(200)
+                self.end_headers()
+            def log_message(self, *_args):
+                pass
+
+        def serve():
+            if delayed and stop.wait(2):
+                return
+            try:
+                with http.server.HTTPServer(('127.0.0.1', port), Handler) as server:
+                    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                    context.load_cert_chain(cert, key)
+                    server.socket = context.wrap_socket(server.socket, server_side=True)
+                    server.timeout = 0.2
+                    listening.set()
+                    while not stop.is_set():
+                        server.handle_request()
+            except Exception as error:
+                server_errors.append(type(error).__name__)
+
+        thread = threading.Thread(target=serve)
+        thread.start()
+        def cleanup():
+            stop.set()
+            thread.join(timeout=5)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(server_errors, [])
+        self.addCleanup(cleanup)
+        if not delayed:
+            self.assertTrue(listening.wait(5))
+        results = []
+        def run(arguments, **_kwargs):
+            if arguments[0] != 'curl':
+                return b''
+            command = [value.replace('coolify.example.test:443:', f'coolify.example.test:{port}:')
+                       .replace('https://coolify.example.test/', f'https://coolify.example.test:{port}/')
+                       for value in arguments]
+            for flag, value in (('--retry', '5'), ('--retry-delay', '1'),
+                                ('--retry-max-time', '4'), ('--max-time', '2')):
+                command[command.index(flag) + 1] = value
+            command += ['--noproxy', '*']
+            if trusted:
+                command += ['--cacert', str(cert)]
+            result = subprocess.run(command, capture_output=True, timeout=12)
+            results.append(result)
+            if result.returncode:
+                raise runtime.SetupError('Required curl command failed.')
+            return result.stdout
+        self.dependencies['run'].side_effect = run
+        return results, observations
+
+    def test_delayed_proxy_requires_a_real_verified_https_response(self):
+        results, observations = self.real_https_fixture(trusted=True, delayed=True)
+        runtime.bootstrap()
+        self.assertTrue(self.ready.exists())
+        self.assertEqual(results[0].returncode, 0)
+        # The listener was initially absent; successful retries still use TLS verification.
+        self.assertIn(b'curl: (7)', results[0].stderr)
+        self.assertEqual(observations, [('/login', False)])
+
+    def test_untrusted_proxy_certificate_never_records_readiness(self):
+        results, observations = self.real_https_fixture(trusted=False, delayed=False)
+        with self.assertRaises(runtime.SetupError):
+            runtime.bootstrap()
+        self.assertEqual(results[0].returncode, 60)
+        self.assertFalse(self.ready.exists())
+        self.assertEqual(observations, [])
 
 
 if __name__ == '__main__':

@@ -137,6 +137,8 @@ def main():
                                 'data_uses_remaining_disk': True}
     record['initial_trim_requires_coolify_ready'] = True
     record['coolify_health_requires_upstream_initialization'] = True
+    record['proxy_start_owned_by_upstream_seeder'] = True
+    record['https_readiness_retry_max_seconds'] = 180
     record['callback_boot_graph'] = ordering
     (output / 'build.json').write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
     print(json.dumps(record, indent=2, sort_keys=True), flush=True)

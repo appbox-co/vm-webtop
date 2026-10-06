@@ -90,8 +90,10 @@ the installation bcrypt hash, checks its owner role and disables registration.
 The Compose health check waits for the upstream `init-script` service, which runs
 after migrations and seeding, as well as HTTP health. The HTTP endpoint alone
 returns success before initialization finishes. The dashboard route is configured
-after account setup. The VM callback depends
-on this setup and successful HTTPS verification, so a provisioning failure
+after account setup. The upstream production seeder owns proxy startup; the
+package does not issue a competing start. Strict HTTPS verification retries for
+up to 180 seconds while that queued start and the dashboard route become ready.
+The VM callback depends on this setup and successful HTTPS verification, so a provisioning failure
 cannot report installation success.
 
 Keep automatic Coolify updates disabled for this package. The upstream updater
