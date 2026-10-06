@@ -64,7 +64,7 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash):
     scratch = work / f'clone-{number}'
     scratch.mkdir(mode=0o700)
     disk = scratch / 'clone.qcow2'
-    image = receipt.parent / json.loads(receipt.read_text())['image']
+    image = (receipt.parent / json.loads(receipt.read_text())['image']).resolve()
     run(['qemu-img', 'create', '-f', 'qcow2', '-F', 'qcow2', '-b', str(image), str(disk), '64G'])
     key = scratch / 'access-key'
     run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-C', 'disposable-coolify-clone-check', '-f', str(key)])
@@ -207,6 +207,7 @@ def main():
     # A synthetic test hash, never an operator or customer credential.
     parser.add_argument('--fixture-hash', required=True)
     args = parser.parse_args()
+    args.receipt = args.receipt.resolve()
     assert socket.getfqdn() == 'builder.grant.appboxes.co' and os.geteuid() != 0
     assert re.fullmatch(r'\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}', args.fixture_hash)
     work = args.work_dir.resolve()
