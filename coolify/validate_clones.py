@@ -138,7 +138,21 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image, accelera
         threading.Thread(target=server.serve_forever, daemon=True).start()
         seed_arguments = ['-smbios', f'type=1,serial=ds=nocloud;s=http://172.20.35.1:{server.server_port}/']
     with socket.socket() as probe:
-        probe.bind(('127.0.0.1', 0))
+        if accelerator == 'kvm':
+            # The verified host's existing policy drops ephemeral loopback
+            # ports. Other temporary services choose this shared pool from
+            # the beginning; use a free port from its end without changing
+            # firewall rules or taking an occupied listener.
+            for candidate in range(12809, 12800, -1):
+                try:
+                    probe.bind(('127.0.0.1', candidate))
+                    break
+                except OSError:
+                    continue
+            else:
+                raise RuntimeError('No allowed loopback fixture port is available.')
+        else:
+            probe.bind(('127.0.0.1', 0))
         port = probe.getsockname()[1]
     qemu_accelerator = 'kvm' if accelerator == 'kvm' else 'tcg,thread=multi'
     qemu = None

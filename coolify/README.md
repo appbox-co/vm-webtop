@@ -227,6 +227,9 @@ and at least 16 GiB available memory. It runs the same two sequential 4-CPU,
 The hardware fixture attaches a local NoCloud seed ISO using the installed
 `cloud-localds`, as the normal Appbox installer does. Its generated ISO contains
 only disposable fixture data and is removed with the access material.
+Hardware SSH uses a currently free loopback port from the existing
+12801–12809 temporary-service pool, selected from its end. Occupied listeners
+are preserved; the fixture does not change the host firewall.
 It does not register libvirt domains, change shared services or publish an image.
 It accepts a verified sealed-image receipt and a synthetic test bcrypt
 hash, boots two fresh 64 GiB scratch overlays sequentially with SSH exposed on
