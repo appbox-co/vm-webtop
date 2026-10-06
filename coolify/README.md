@@ -213,6 +213,11 @@ Required checks before publication and catalogue launch:
   persist. Exercise the validated application upgrade with the same data.
 - Run the ownership, shutdown and Docker service checks as root inside the VM.
 
+The clone disks and a checksum-verified sealed-image copy use private local
+scratch storage under `/var/tmp` on the builder. The virtiofs home share retains
+logs and receipts; nested guest disk I/O there exceeded the storage timeout.
+Scratch disks are retained for diagnosis and must be removed after the tests.
+
 `coolify/validate_clones.py` performs the isolated clone preflight on the designated
 builder. It accepts a verified sealed-image receipt and a synthetic test bcrypt
 hash, boots two 64 GiB scratch overlays with SSH exposed on loopback only, and

@@ -11,9 +11,11 @@ import os
 from pathlib import Path
 import re
 import shlex
+import shutil
 import socket
 import subprocess
 import threading
+import tempfile
 import time
 
 
@@ -66,12 +68,16 @@ print(json.dumps({'fingerprints':fingerprints,'account_name':account['name'],'bo
 """
 
 
-def clone(receipt, work, number, ca, ca_key, fixture_hash):
+def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image):
     scratch = work / f'clone-{number}'
     scratch.mkdir(mode=0o700)
+    # The builder's virtiofs home share showed high I/O pressure during
+    # nested QEMU cache copying. Keep only disposable
+    # guest disks on the builder's local filesystem; logs remain in builds.
+    local_disk = local_image.parent / f'clone-{number}.qcow2'
+    run(['qemu-img', 'create', '-f', 'qcow2', '-F', 'qcow2', '-b', str(local_image), str(local_disk), '64G'])
     disk = scratch / 'clone.qcow2'
-    image = (receipt.parent / json.loads(receipt.read_text())['image']).resolve()
-    run(['qemu-img', 'create', '-f', 'qcow2', '-F', 'qcow2', '-b', str(image), str(disk), '64G'])
+    disk.symlink_to(local_disk)
     key = scratch / 'access-key'
     run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-C', 'disposable-coolify-clone-check', '-f', str(key)])
     domain = f'coolify-clone-{number}.example.test'
@@ -233,6 +239,19 @@ def main():
     with image.open('rb') as source:
         assert hashlib.file_digest(source, 'sha256').hexdigest() == receipt['image_sha256']
     assert receipt['normal_appbox_install_tested'] is False
+    disk_filesystem = run(['findmnt', '--noheadings', '--output', 'FSTYPE', '--target', '/var/tmp']).strip()
+    if disk_filesystem not in ('ext4', 'xfs') or shutil.disk_usage('/var/tmp').free < 32 * 1024**3:
+        raise RuntimeError('Clone tests require sufficient local scratch storage.')
+    local = Path(tempfile.mkdtemp(prefix=work.name + '-', dir='/var/tmp'))
+    local_image = local / image.name
+    shutil.copyfile(image, local_image)
+    local_image.chmod(0o600)
+    with local_image.open('rb') as source:
+        assert hashlib.file_digest(source, 'sha256').hexdigest() == receipt['image_sha256']
+    (work / 'scratch-location.json').write_text(json.dumps({
+        'directory': str(local), 'filesystem': disk_filesystem,
+        'sealed_image_copy_checksum_verified': True}) + '\n')
+    print('Disposable clone disks use checksum-verified builder-local scratch storage.', flush=True)
     ca = work / 'ca.pem'
     ca_key = work / 'ca.key'
     run(['openssl', 'req', '-x509', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:prime256v1',
@@ -241,13 +260,15 @@ def main():
     try:
         with ThreadPoolExecutor(max_workers=2) as pool:
             results = list(pool.map(lambda n: clone(args.receipt, work, n, ca, ca_key,
-                                                    args.fixture_hash), [1, 2]))
+                                                    args.fixture_hash, local_image), [1, 2]))
         independence = {key: results[0]['fingerprints'][key] != results[1]['fingerprints'][key]
                         for key in results[0]['fingerprints']}
         assert all(independence.values())
         output = {
             'created_at': datetime.now(timezone.utc).isoformat(),
             'image_commit': receipt['commit'], 'image_sha256': receipt['image_sha256'],
+            'fixture_disk_filesystem': disk_filesystem,
+            'sealed_image_copy_checksum_verified': True,
             'clones': [{k: v for k, v in result.items() if k != 'fingerprints'} for result in results],
             'independent_generated_state': independence, 'normal_appbox_callback_tested': False,
             'public_stream_tls_tested': False, 'grant_18000gib_trim_tested': False,
