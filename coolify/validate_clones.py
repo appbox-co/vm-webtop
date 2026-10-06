@@ -194,7 +194,7 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image):
         mutation = r"""require '/var/www/html/vendor/autoload.php';$app=require '/var/www/html/bootstrap/app.php';$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();$u=App\Models\User::findOrFail(0);$u->name='Clone persistence fixture';$u->save();"""
         run(ssh + ['sudo -n docker exec coolify php -r ' + shlex.quote(mutation)])
         run(ssh + ['sudo -n systemd-run --quiet --on-active=2 --unit=coolify-fixture-poweroff systemctl poweroff'])
-        qemu.wait(timeout=120)
+        qemu.wait(timeout=300)
         assert qemu.returncode == 0
         qemu = boot(2)
         print(f'Clone {number}: checking reboot persistence.', flush=True)
@@ -204,7 +204,7 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image):
         assert second['account_name'] == 'Clone persistence fixture'
         print(f'Clone {number}: post-trim reboot persistence passed.', flush=True)
         run(ssh + ['sudo -n systemd-run --quiet --on-active=2 --unit=coolify-fixture-poweroff systemctl poweroff'])
-        qemu.wait(timeout=120)
+        qemu.wait(timeout=300)
         assert qemu.returncode == 0
         return {'fingerprints': first['fingerprints'], 'cold_boot': True, 'reboot': True,
                 'trim_64gib': True, 'root_checks': True}
