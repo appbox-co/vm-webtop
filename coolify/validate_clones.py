@@ -49,9 +49,13 @@ if any(state['ActiveState']=='failed' for state in units.values()):
 env={}
 for line in Path('/data/coolify/source/.env').read_text().splitlines():
  k,v=line.split('=',1);env[k]=v
-unit=lambda name:dict(line.split('=',1) for line in subprocess.check_output(['systemctl','show',name,'-p','Result','-p','ExecMainStatus','-p','ExecMainStartTimestampMonotonic'],text=True).splitlines())
+unit=lambda name:dict(line.split('=',1) for line in subprocess.check_output(['systemctl','show',name,'-p','Result','-p','ExecMainStatus','-p','ExecMainStartTimestampMonotonic','-p','ConditionResult'],text=True).splitlines())
 callback=unit('cylo-callback.service')
-assert callback['Result']=='success' and callback['ExecMainStatus']=='0' and int(callback['ExecMainStartTimestampMonotonic'])>0
+marker=Path('/var/lib/appbox-coolify/callback-complete')
+assert marker.is_file() and marker.stat().st_mode&0o777==0o600
+# The first boot runs the callback; later boots skip its consumed token.
+callback_ran=int(callback['ExecMainStartTimestampMonotonic'])>0
+assert (callback_ran and callback['Result']=='success' and callback['ExecMainStatus']=='0') or (not callback_ran and callback['ConditionResult']=='no')
 assert Path('/data/coolify/source/.appbox-ready').is_file()
 assert unit('appbox-coolify.service')['Result']=='success'
 assert Path('/data/coolify/source/.env').stat().st_uid==9999
@@ -66,7 +70,31 @@ fingerprints={k:hashlib.sha256(env[k].encode()).hexdigest() for k in ('APP_ID','
 # key filename is not a reliable persisted identity after initialization.
 fingerprints['localhost_ssh_key']=account['localhost_ssh_key_sha256']
 for k,path in {'ssh_host_key':'/etc/ssh/ssh_host_ed25519_key.pub','machine_id':'/etc/machine-id','storage_identity':'/var/lib/appbox-coolify/storage.json'}.items():fingerprints[k]=hashlib.sha256(Path(path).read_bytes()).hexdigest()
-print(json.dumps({'fingerprints':fingerprints,'account_name':account['name'],'boot_id':Path('/proc/sys/kernel/random/boot_id').read_text().strip(),'root_checks_passed':True}))
+print(json.dumps({'fingerprints':fingerprints,'account_name':account['name'],'boot_id':Path('/proc/sys/kernel/random/boot_id').read_text().strip(),'callback_ran':callback_ran,'root_checks_passed':True}))
+"""
+
+# fstrim may trim only OS filesystems. /data and its container bind mounts use
+# online discard, which must still reach the virtual disk after a deletion.
+TRIM_CHECK = r"""import json,os,subprocess,time
+from pathlib import Path
+show=lambda name,*keys:dict(line.split('=',1) for line in subprocess.check_output(['systemctl','show',name]+[a for k in keys for a in ('-p',k)],text=True).splitlines())
+s=show('fstrim.service','ConditionResult','Result','ExecMainStatus','ExecMainStartTimestampMonotonic','InvocationID')
+assert s['ConditionResult']=='yes' and s['Result']=='success' and s['ExecMainStatus']=='0' and int(s['ExecMainStartTimestampMonotonic'])>0
+lines=subprocess.check_output(['journalctl','--no-pager','-o','cat','_SYSTEMD_INVOCATION_ID='+s['InvocationID']],text=True).splitlines()
+trimmed=sorted({line.split(':',1)[0] for line in lines if ' trimmed' in line and line.startswith('/')})
+assert '/' in trimmed and not set(trimmed)&{'/data','/var/lib/docker','/var/lib/containerd'}, trimmed
+options=subprocess.check_output(['findmnt','-n','-o','OPTIONS','/data'],text=True).strip().split(',')
+assert 'discard' in options
+sectors=lambda:int(Path('/sys/block/vda/stat').read_text().split()[13])
+fixture=Path('/data/appbox-discard-fixture')
+with fixture.open('wb') as output:
+ for _ in range(64):output.write(os.urandom(4*1024*1024))
+ output.flush();os.fsync(output.fileno())
+before=sectors();fixture.unlink();os.sync()
+deadline=time.monotonic()+60
+while sectors()-before<131072 and time.monotonic()<deadline:time.sleep(1);os.sync()
+assert sectors()-before>=131072
+print(json.dumps({'trimmed_mountpoints':trimmed,'data_online_discard':True}))
 """
 
 
@@ -211,10 +239,10 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image, accelera
             return result
         first = wait(check, 1200)
         print(f'Clone {number}: cold bootstrap, owner and HTTPS readiness passed.', flush=True)
+        assert first['callback_ran']
         run(ssh + ['sudo -n systemctl start fstrim.service'], timeout=180)
-        trim_check = "import subprocess; s=dict(line.split('=',1) for line in subprocess.check_output(['systemctl','show','fstrim.service','-p','ConditionResult','-p','Result','-p','ExecMainStatus','-p','ExecMainStartTimestampMonotonic'],text=True).splitlines());assert s['ConditionResult']=='yes' and s['Result']=='success' and s['ExecMainStatus']=='0' and int(s['ExecMainStartTimestampMonotonic'])>0"
-        run(ssh + ['sudo -n python3 -c ' + shlex.quote(trim_check)])
-        print(f'Clone {number}: actual 64 GiB discard test passed.', flush=True)
+        trim = json.loads(run(ssh + ['sudo -n python3 -c ' + shlex.quote(TRIM_CHECK)], timeout=180))
+        print(f'Clone {number}: OS fstrim and /data online discard passed.', flush=True)
         mutation = r"""require '/var/www/html/vendor/autoload.php';$app=require '/var/www/html/bootstrap/app.php';$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();$u=App\Models\User::findOrFail(0);$u->name='Clone persistence fixture';$u->save();"""
         run(ssh + ['sudo -n docker exec coolify php -r ' + shlex.quote(mutation)])
         run(ssh + ['sudo -n systemd-run --quiet --on-active=2 --unit=coolify-fixture-poweroff systemctl poweroff'])
@@ -226,12 +254,15 @@ def clone(receipt, work, number, ca, ca_key, fixture_hash, local_image, accelera
         assert first['boot_id'] != second['boot_id']
         assert first['fingerprints'] == second['fingerprints']
         assert second['account_name'] == 'Clone persistence fixture'
+        assert not second['callback_ran']
         print(f'Clone {number}: post-trim reboot persistence passed.', flush=True)
         run(ssh + ['sudo -n systemd-run --quiet --on-active=2 --unit=coolify-fixture-poweroff systemctl poweroff'])
         qemu.wait(timeout=300)
         assert qemu.returncode == 0
         return {'fingerprints': first['fingerprints'], 'cold_boot': True, 'reboot': True,
-                'trim_64gib': True, 'root_checks': True}
+                'trim_64gib': True, 'trimmed_mountpoints': trim['trimmed_mountpoints'],
+                'data_online_discard': trim['data_online_discard'],
+                'callback_skipped_after_reboot': True, 'root_checks': True}
     finally:
         if server is not None:
             server.shutdown()

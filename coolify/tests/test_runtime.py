@@ -279,6 +279,34 @@ class ComposeTests(unittest.TestCase):
         self.assertTrue(all(port['protocol'] == 'tcp' for port in proxy['ports']))
 
 
+class CallbackCompletionTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.data = Path(self.directory.name) / 'data'
+        (self.data / 'source').mkdir(parents=True)
+        self.marker = Path(self.directory.name) / 'state/callback-complete'
+
+    def test_completion_is_recorded_privately_and_repeatably(self):
+        (self.data / 'source/.appbox-ready').write_text('{}')
+        runtime.mark_callback_complete(data=self.data, marker=self.marker)
+        runtime.mark_callback_complete(data=self.data, marker=self.marker)
+        self.assertEqual(self.marker.read_bytes(), b'completed\n')
+        self.assertEqual(self.marker.stat().st_mode & 0o777, 0o600)
+
+    def test_unfinished_setup_is_never_marked_complete(self):
+        with self.assertRaises(runtime.SetupError):
+            runtime.mark_callback_complete(data=self.data, marker=self.marker)
+        self.assertFalse(self.marker.exists())
+
+    def test_callback_unit_skips_after_completion_and_records_success(self):
+        unit = (PACKAGE / 'systemd/callback.conf').read_text()
+        self.assertIn('ConditionPathExists=!' + str(runtime.CALLBACK_COMPLETE), unit)
+        self.assertIn('ExecStartPost=/usr/local/lib/appbox-coolify/runtime.py callback-complete', unit)
+        self.assertLess(unit.index('[Unit]'), unit.index('ConditionPathExists'))
+        self.assertLess(unit.index('[Service]'), unit.index('ExecStartPost'))
+
+
 class BootstrapTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()

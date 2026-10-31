@@ -2,6 +2,7 @@ import copy
 import importlib.util
 from pathlib import Path
 import unittest
+import unittest.mock
 
 spec = importlib.util.spec_from_file_location('coolify_storage', Path(__file__).resolve().parents[1] / 'storage.py')
 storage = importlib.util.module_from_spec(spec)
@@ -62,6 +63,26 @@ class StorageSafetyTest(unittest.TestCase):
         self.assertEqual(storage.fstab_contents(result, self.state['filesystem_uuid']), result)
         with self.assertRaises(RuntimeError):
             storage.fstab_contents(original + '/dev/vdb2 /data xfs defaults 0 0\n', self.state['filesystem_uuid'])
+
+    def test_data_discards_online_and_is_excluded_from_fstrim(self):
+        result = storage.fstab_contents('LABEL=cloudimg-rootfs / ext4 defaults 0 1\n',
+                                        self.state['filesystem_uuid'])
+        owned = result.split(storage.BEGIN)[1].split(storage.END)[0].splitlines()
+        options = {line.split()[1]: line.split()[3].split(',') for line in owned}
+        self.assertEqual(set(options), {'/data', '/var/lib/docker', '/var/lib/containerd'})
+        self.assertIn('discard', options['/data'])
+        for mount in options.values():
+            self.assertIn('X-fstrim.notrim', mount)
+        self.assertNotIn('notrim', result.split(storage.BEGIN)[0])
+
+    def test_first_boot_data_mount_uses_online_discard(self):
+        calls = []
+        records = iter([None, [self.state['filesystem_uuid'], 'xfs', '/']])
+        with unittest.mock.patch.object(storage, 'run', side_effect=lambda args, **_: calls.append(args)), \
+                unittest.mock.patch.object(storage, 'mount_record', side_effect=lambda _: next(records)), \
+                unittest.mock.patch.object(storage.Path, 'mkdir'):
+            storage.ensure_mount('/dev/vda2', '/data', self.state['filesystem_uuid'], '/')
+        self.assertEqual(calls, [['mount', '-o', 'discard', '/dev/vda2', '/data']])
 
 
 if __name__ == '__main__':

@@ -18,6 +18,11 @@ def verify(package, callback, storage=None):
         executable.parent.mkdir(parents=True)
         executable.write_text('#!/bin/sh\nexit 0\n')
         executable.chmod(0o755)
+        # The callback drop-in records completion with the package helper.
+        helper = root / 'usr/local/lib/appbox-coolify/runtime.py'
+        helper.parent.mkdir(parents=True)
+        helper.write_text('#!/bin/sh\nexit 0\n')
+        helper.chmod(0o755)
         targets = {
             'default.target': 'Wants=multi-user.target cloud-init.target\n',
             'multi-user.target': 'Requires=basic.target\nAfter=basic.target\n',

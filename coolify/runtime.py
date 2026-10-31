@@ -20,6 +20,7 @@ PACKAGE = Path('/usr/local/lib/appbox-coolify')
 DATA = Path('/data/coolify')
 CERTIFICATES = Path('/etc/ssl/domains')
 ENVIRONMENT = Path('/etc/environment')
+CALLBACK_COMPLETE = Path('/var/lib/appbox-coolify/callback-complete')
 OPENSSL = 'openssl'
 HASH = re.compile(r'\$2[aby]\$(?:1[0-9]|2[0-9]|3[01])\$[./A-Za-z0-9]{53}')
 DOMAIN = re.compile(r'(?=.{1,253}\Z)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?')
@@ -291,13 +292,26 @@ def bootstrap():
     print('Coolify administrator, HTTPS endpoint and proxy are ready.')
 
 
+def mark_callback_complete(*, data=DATA, marker=CALLBACK_COMPLETE):
+    # Only reached after the generic callback reports HTTP 2xx, which itself
+    # requires completed setup. Sync so an abrupt stop cannot cause a replay.
+    if not (data / 'source/.appbox-ready').is_file():
+        raise SetupError('Coolify setup is not ready; the callback is not marked complete.')
+    write_atomic(marker, b'completed\n', mode=0o600)
+    os.sync()
+
+
 def main():
-    if len(sys.argv) != 2 or sys.argv[1] not in ('bootstrap', 'sync-certificates', 'reset-password'):
-        raise SetupError('Usage: runtime.py bootstrap|sync-certificates|reset-password')
+    commands = ('bootstrap', 'sync-certificates', 'reset-password', 'callback-complete')
+    if len(sys.argv) != 2 or sys.argv[1] not in commands:
+        raise SetupError('Usage: runtime.py ' + '|'.join(commands))
     if os.geteuid() != 0:
         raise SetupError('This command requires root inside the Coolify VM.')
     if sys.argv[1] == 'bootstrap':
         bootstrap()
+    elif sys.argv[1] == 'callback-complete':
+        mark_callback_complete()
+        print('Installation callback recorded; later boots skip it.')
     elif sys.argv[1] == 'sync-certificates':
         domain = valid_domain(json.loads((DATA / 'source/.appbox-ready').read_text())['domain'])
         sync_certificates(domain)

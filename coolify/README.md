@@ -54,7 +54,7 @@ template checksum and produces a new standalone image. OS or kernel updates
 require a fresh full build; its receipt records installed OS package versions
 and the kernel selected for the next boot. It must not use a customer VM or
 initialized Coolify disk. The root mount omits synchronous
-`discard`; the existing fstrim timer handles trimming.
+`discard`; the existing fstrim timer trims it.
 It uses KVM when available and software emulation otherwise. The builder
 and existing Appbox VMs are not used as template disks.
 
@@ -95,6 +95,14 @@ package does not issue a competing start. Strict HTTPS verification retries for
 up to 180 seconds while that queued start and the dashboard route become ready.
 The VM callback depends on this setup and successful HTTPS verification, so a provisioning failure
 cannot report installation success.
+
+The generic `cylo-callback.service` runs on every boot, but its installation
+token is single use. After a reboot the r8 image retried it indefinitely with
+HTTP 401. The package drop-in now runs `runtime.py callback-complete` after the
+callback succeeds. That records `/var/lib/appbox-coolify/callback-complete`
+(after checking setup is ready), and a `ConditionPathExists=!` on the same path
+skips the unit on later boots. Migration and redefine boots use a network-only
+seed with no callback, so they are unaffected. Shared callback code is unchanged.
 
 Keep automatic Coolify updates disabled for this package. The upstream updater
 replaces Compose configuration, which needs separate validation against this
@@ -151,13 +159,25 @@ original cached images remain underneath the Docker bind mounts on the OS disk.
 Changing the VM's disk allocation later needs a separately verified data-growth
 procedure; this initializer does not resize an existing data filesystem.
 
-The r5 validation image skips automatic trimming until the first Coolify setup
-has succeeded. Its own `fstrim.service` condition checks the existing readiness
-marker; later scheduled runs keep the OS trimming service and schedule. This
-is an A/B check of the r4 startup stall, which occurred after storage preparation
-completed and automatic trimming started. It does not establish the underlying
-cause or prove that later trimming is safe. Test an actual trim on the initialized
-VM, followed by a reboot, before declaring this image ready.
+The shared VM configuration runs `fstrim.timer` hourly. On grant's 18,000 GiB
+disk, a full `fstrim` of the mostly free XFS data filesystem held the guest at
+about 90% I/O pressure for over 20 minutes; dashboard requests timed out and the
+service stop hit its timeout (validation/grant-2026-10-06.md). XFS does not
+remember trimmed ranges, so every run would repeat that sweep.
+
+`/data` is therefore mounted with online `discard`, which releases each extent
+as it is freed, and its fstab entry carries `X-fstrim.notrim`. The `/var/lib/docker`
+and `/var/lib/containerd` bind mounts carry `X-fstrim.notrim` as well, so `fstrim`
+cannot reach the same filesystem through them. First boot mounts `/data` with
+`discard` before it writes the fstab block. The 32 GiB root filesystem keeps the
+hourly timer. Its `fstrim.service` condition still skips trimming until the first
+Coolify setup has succeeded.
+
+An Ubuntu 26.04 container with util-linux 2.41.3 confirmed that `fstrim
+--listed-in` skips these entries and still trims an unmarked filesystem, and
+that deleting a 256 MiB file on an online-discard XFS mount discards all of it.
+The clone preflight repeats both checks inside the guest. Neither replaces a
+full-size test on grant.
 
 Keep `/data/coolify`, its `.env` and the Docker volumes in the VM disk and include
 them in backups. The `.env` encryption key is needed to restore stored secrets.
@@ -209,8 +229,12 @@ Required checks before publication and catalogue launch:
 - Verify dashboard realtime updates and the web terminal over WebSockets.
 - Verify renewal, a newly attached custom-domain certificate and the actual
   TLS-ALPN challenge workflow. Check HTTP redirects and hostname routing.
+- On the full-size disk, run `fstrim.service` and confirm only OS filesystems
+  are trimmed while the dashboard stays responsive. Delete a test file on `/data`
+  and confirm its discard reaches the virtual disk.
 - Reboot and verify project data, accounts, edited settings and configuration
-  persist. Exercise the validated application upgrade with the same data.
+  persist. Confirm `cylo-callback.service` is skipped after the reboot, with no
+  callback requests. Exercise the validated application upgrade with the same data.
 - Run the ownership, shutdown and Docker service checks as root inside the VM.
 
 The clone disks and a checksum-verified sealed-image copy use private local
@@ -236,8 +260,10 @@ hash, boots two fresh 64 GiB scratch overlays sequentially with SSH exposed on
 loopback only, and uses a private fixture CA. Concurrent software-emulated
 guests exceeded startup limits during cache copying and container initialization;
 sequential execution retains the image and every timeout. It checks cold setup, root ownership, administrator
-role, disabled registration and automatic updates, actual trimming, and a
-subsequent reboot with independent secrets and preserved account state. Only
+role, disabled registration and automatic updates, an `fstrim` run that trims
+only OS filesystems, online discard on `/data`, and a subsequent reboot with
+independent secrets, preserved account state and a skipped callback. The fixture
+callback goes through the same package drop-in and completion marker. Only
 comparison booleans enter its receipt. Localhost key persistence is checked
 against Coolify's canonical database key, rather than the bootstrap key filename.
 The fixture allows up to five minutes for each clean guest poweroff and still

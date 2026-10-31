@@ -16,6 +16,7 @@ BASE = {1: (1190133760, 33169587712), 13: (1048576, 1072693760),
         14: (1074790400, 4194304), 15: (1078984704, 111149056)}
 BEGIN = '# BEGIN Appbox Coolify storage\n'
 END = '# END Appbox Coolify storage\n'
+DATA_OPTIONS = 'discard'
 
 
 def run(args, *, accepted=(0,)):
@@ -73,10 +74,14 @@ def fstab_contents(original, filesystem_uuid):
             continue
         if fields[1] in ('/data', '/var/lib/docker', '/var/lib/containerd'):
             raise RuntimeError('A user-defined mount already owns a Coolify storage path')
+    # The shared VM config runs fstrim hourly. A FITRIM sweep of this large,
+    # mostly free XFS filesystem stalled the guest, so /data discards freed
+    # extents online instead. The bind mounts would otherwise reach the same
+    # filesystem through fstrim, so they are excluded as well.
     return original.rstrip() + '\n' + BEGIN + (
-        f'UUID={filesystem_uuid} /data xfs defaults 0 0\n'
-        '/data/docker /var/lib/docker none bind,x-systemd.requires-mounts-for=/data 0 0\n'
-        '/data/containerd /var/lib/containerd none bind,x-systemd.requires-mounts-for=/data 0 0\n'
+        f'UUID={filesystem_uuid} /data xfs {DATA_OPTIONS},X-fstrim.notrim 0 0\n'
+        '/data/docker /var/lib/docker none bind,x-systemd.requires-mounts-for=/data,X-fstrim.notrim 0 0\n'
+        '/data/containerd /var/lib/containerd none bind,x-systemd.requires-mounts-for=/data,X-fstrim.notrim 0 0\n'
     ) + END
 
 
@@ -113,7 +118,8 @@ def ensure_mount(source, target, filesystem_uuid, fsroot):
     Path(target).mkdir(parents=True, exist_ok=True)
     record = mount_record(target)
     if record is None:
-        run(['mount', source, target] if target == '/data' else ['mount', '--bind', source, target])
+        run(['mount', '-o', DATA_OPTIONS, source, target] if target == '/data'
+            else ['mount', '--bind', source, target])
         record = mount_record(target)
     if record != [filesystem_uuid, 'xfs', fsroot]:
         raise RuntimeError('Storage mount does not match this instance')

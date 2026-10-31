@@ -97,10 +97,10 @@ def main():
     commands += f'download /etc/systemd/system/fstrim.service.d/coolify-first-boot.conf {checks / "fstrim.conf"}\n'
     for unit in ('docker.service', 'docker.socket', 'containerd.service'):
         commands += f'download /etc/systemd/system/{unit}.d/coolify-storage.conf {checks / unit}\n'
-    for path in ('/var/lib/systemd/random-seed', '/data/coolify/source/.env', '/data/coolify/source/.appbox-ready', '/var/lib/appbox-coolify/storage.json', '/etc/growroot-disabled'):
+    for path in ('/var/lib/systemd/random-seed', '/data/coolify/source/.env', '/data/coolify/source/.appbox-ready', '/var/lib/appbox-coolify/storage.json', '/var/lib/appbox-coolify/callback-complete', '/etc/growroot-disabled'):
         commands += f'exists {path}\n'
     state = run(['sudo', '-n', 'guestfish', '--ro', '--format=qcow2', '-a', str(disk), '-i'], input_data=commands)
-    if state.split() != ['false', 'false', 'false', 'false', 'true']:
+    if state.split() != ['false', 'false', 'false', 'false', 'false', 'true']:
         raise RuntimeError('Rebuilt template contains an identity seed or initialized state')
     for relative in files:
         if (checks / relative).read_bytes() != (package / relative).read_bytes():
@@ -136,6 +136,8 @@ def main():
     record['storage_layout'] = {'os_disk_bytes': 34359738368, 'data_filesystem': 'xfs',
                                 'data_uses_remaining_disk': True}
     record['initial_trim_requires_coolify_ready'] = True
+    record['data_trim'] = 'online discard; /data and its bind mounts excluded from fstrim'
+    record['callback_skipped_after_completion'] = True
     record['coolify_health_requires_upstream_initialization'] = True
     record['proxy_start_owned_by_upstream_seeder'] = True
     record['https_readiness_retry_max_seconds'] = 180
