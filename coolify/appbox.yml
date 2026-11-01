@@ -1,4 +1,4 @@
-# VM metadata; registration uses catalogue/register-admin-test-r8.sql.
+# VM metadata; registration uses catalogue/register-admin-test-r9.sql.
 # Do not run the Docker-only apps importer against this manifest.
 app:
   display_name: Coolify VPS
@@ -19,11 +19,11 @@ app:
   categories: [16, 27, 29]
   type: vm
 image:
-  name: coolify-ubuntu-26.04-4.3.23-eb8908d44450.qcow2
-  version: 4.3.23 / Ubuntu 26.04 r8
-  tag: 4.3.23-ubuntu26.04-eb8908d
-  sha256: b8abec914ed2f935282f4b6ac9f653667d9fa7a4a9e853f40ed33476dd823c3f
-  source_commit: eb8908d444508c0fc63851a35a46e4285cff3480
+  name: coolify-ubuntu-26.04-4.3.23-9a167fb96027.qcow2
+  version: 4.3.23 / Ubuntu 26.04 r9
+  tag: 4.3.23-ubuntu26.04-9a167fb
+  sha256: 7ec41dec5245e70908aa6f8900f50d751838a16e71950993cf5ee6573a963d52
+  source_commit: 9a167fb96027cd61e1dc4c8c48a04003d2358312
 container:
   memory: 8
   memory_swap: 8
