@@ -129,8 +129,9 @@ not automatically register project hostnames or enable wildcard routing.
 
 Appbox's outer port 80 handling does not forward ACME HTTP challenges to
 Coolify. The packaged proxy therefore uses TLS-ALPN challenges on port 443
-for domains without supplied Appbox certificates. This route needs validation
-on the actual installed VM before that certificate workflow is claimed.
+for domains without supplied Appbox certificates. This was verified on an
+installed VM: a custom hostname routed through the Appbox stream received its
+own Let's Encrypt certificate this way.
 The initial administrator email is also used for ACME registration.
 HTTP/3 is disabled because the existing stream path carries TCP traffic.
 
